@@ -1,0 +1,51 @@
+_envops:
+  trim_blocks: true
+  lstrip_blocks: true 
+
+project_type:
+  type: str
+  help: What type of project are you creating?
+  choices:
+    - "api"
+    - "mcp-server"
+    - "agent"
+
+project_name:
+  type: str
+  help: What is your project name?
+  validator: |
+    {% if project_name | length < 1 %}
+    project_name must cannot be empty string
+    {% endif %}
+    {% if not (project_name | regex_search('^[a-z][a-z0-9\-]+$')) %}
+    project_name must start with a letter, followed one or more letters, digits or dashes (all lowercase).
+    {% endif %}
+
+project_description:
+  type: str
+  help: What is your project description (it will be used in pyproject.toml)?
+  default: ""
+
+python_versions:
+  type: str
+  help: What Python versions will be supported?
+  default:
+    - "3.13"
+  multiselect: true
+  choices:
+    - "3.12"
+    - "3.13"
+  validator: |
+    {% set all_ver = ["3.12", "3.13"] %}
+    {% if all_ver.index(python_versions[-1]) - all_ver.index(python_versions[0]) + 1 != python_versions|length %}
+    python_versions must be a consecutive list of versions
+    {% endif %}
+
+default_python_version:
+  type: str
+  help: What is the default Python version?
+  default: "{{python_versions[-1]}}"
+  choices: |
+    {% for ver in python_versions %}
+    - "{{ver}}"
+    {% endfor %}
