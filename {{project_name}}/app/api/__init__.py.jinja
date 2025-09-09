@@ -1,0 +1,8 @@
+{% if project_type == "agent" %}
+from app.api.endpoints.v1.chat import chat_router
+{% endif %}
+
+
+__all__ = [
+    "{{'chat_router' if project_type == 'agent' else ''}}",
+]

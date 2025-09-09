@@ -20,13 +20,23 @@ class Settings(BaseSettings):
     api_latest: str = api_v1
     paging_limit: int = 100
 
+    {% if project_type == "api" %}
     # DATABASE SETTINGS
     db_host: str = "localhost"
     db_port: int = 5432
     db_name: str = "{{project_name}}"
     db_user: str = "user"
     db_password: SecretStr = SecretStr("password")
+    {% endif %}
 
+    {% if project_type == "agent" %}
+    # AGENT SETTINGS
+    api_key: str
+    model: str = "gtp-4o"
+    mcp_url: str = "http://127.0.0.1:8000/mcp" # include "/mcp" endpoint
+    {% endif %}
+
+    {% if project_type == "api" %}
     @property
     def db_uri(self) -> str:
         return (
@@ -34,6 +44,7 @@ class Settings(BaseSettings):
             f"{self.db_user}:{self.db_password.get_secret_value()}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
+    {% endif %}
 
     # 0. pytest ini_options
     # 1. environment variables
