@@ -49,3 +49,13 @@ default_python_version:
     {% for ver in python_versions %}
     - "{{ver}}"
     {% endfor %}
+
+_exclude:
+  - /README.md
+  - copier.yaml
+  - .git
+  - "{{ 'migrations' if project_type not in ['api'] else '' }}"
+  - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
+  - "{{ '*/app/api' if project_type not in ['api', 'agent'] else '' }}"
+  - "{{ '*/app/api.py' if project_type != 'api' else '' }}"
+  - "{{ '*/app/agent.py' if project_type != 'agent' else '' }}"

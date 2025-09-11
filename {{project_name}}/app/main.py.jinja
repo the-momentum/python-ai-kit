@@ -6,6 +6,9 @@ from fastapi.exceptions import RequestValidationError
 from app.api import head_router
 from app.config import settings
 from app.utils.exceptions import handle_exception
+{% if project_type == "agent" %}
+from app.api import chat_router
+{% endif %}
 
 basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(message)s")
 
@@ -23,3 +26,6 @@ async def root() -> dict[str, str]:
 
 
 api.include_router(head_router, prefix=settings.api_latest)
+{% if project_type == "agent" %}
+api.include_router(chat_router, prefix=settings.api_latest)
+{% endif %}

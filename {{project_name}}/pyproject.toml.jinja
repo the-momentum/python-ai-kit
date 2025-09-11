@@ -10,13 +10,18 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     {% if project_type == "api" %}
     "email-validator>=2.2.0",
-    "fastapi>=0.116.1",
-    "fastapi-cli>=0.0.8",
     "psycopg>=3.2.9",
     "sqlalchemy>=2.0.43",
     {% elif project_type == "mcp-server" %}
     "fastmcp>=2.12.2",
     "pydantic>=2.11.7",
+    {% elif project_type == "agent" %}
+    "llama-index>=0.13.3",
+    "llama-index-tools-mcp>=0.4.0",
+    {% endif %}
+    {% if project_type in ["api", "agent"] %}
+    "fastapi>=0.116.1",
+    "fastapi-cli>=0.0.8",
     {% endif %}
 ]
 
