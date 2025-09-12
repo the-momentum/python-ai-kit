@@ -8,7 +8,7 @@ dependencies = [
     "cryptography>=45.0.4",
     "passlib>=1.7.4",
     "pydantic-settings>=2.10.1",
-    {% if project_type == "api" %}
+    {% if project_type in ["api-monolith", "api-microservice"] %}
     "email-validator>=2.2.0",
     "psycopg>=3.2.9",
     "sqlalchemy>=2.0.43",
@@ -19,7 +19,7 @@ dependencies = [
     "llama-index>=0.13.3",
     "llama-index-tools-mcp>=0.4.0",
     {% endif %}
-    {% if project_type in ["api", "agent"] %}
+    {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     "fastapi>=0.116.1",
     "fastapi-cli>=0.0.8",
     {% endif %}
@@ -66,9 +66,9 @@ ignore = [
     "RET503", # implicit-return
 ]
 
-{% if project_type == "api" %}
+{% if project_type == "api-monolith" %}
 [tool.ruff.lint.per-file-ignores]
-"app/*/views.py" = ["ANN201"]
+"app/*/routes/*/*.py" = ["ANN201"]
 # ignoring annotation of return type of FastAPI endpoints to use just reponse_model
 {% endif %}
 

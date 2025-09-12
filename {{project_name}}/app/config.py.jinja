@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     api_latest: str = api_v1
     paging_limit: int = 100
 
-    {% if project_type == "api" %}
+    {% if project_type in ["api-monolith", "api-microservice"] %}
     # DATABASE SETTINGS
     db_host: str = "localhost"
     db_port: int = 5432
@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     mcp_url: str = "http://127.0.0.1:8000/mcp" # include "/mcp" endpoint
     {% endif %}
 
-    {% if project_type == "api" %}
+    {% if project_type in ["api-monolith", "api-microservice"] %}
     @property
     def db_uri(self) -> str:
         return (

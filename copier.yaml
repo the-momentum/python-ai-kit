@@ -6,7 +6,8 @@ project_type:
   type: str
   help: What type of project are you creating?
   choices:
-    - "api"
+    - "api-monolith"
+    - "api-microservice"
     - "mcp-server"
     - "agent"
 
@@ -54,8 +55,18 @@ _exclude:
   - /README.md
   - copier.yaml
   - .git
-  - "{{ 'migrations' if project_type not in ['api'] else '' }}"
+
   - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
-  - "{{ '*/app/api' if project_type not in ['api', 'agent'] else '' }}"
-  - "{{ '*/app/api.py' if project_type != 'api' else '' }}"
+
+  - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
+  
+  - "{{ '*/app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
+
   - "{{ '*/app/agent.py' if project_type != 'agent' else '' }}"
+
+  - "{{ '*/app/api.py' if project_type != 'api-monolith' else '' }}"
+
+  - "{{ '*/app/models' if project_type != 'api-microservice' else '' }}"
+  - "{{ '*/app/schemas' if project_type != 'api-microservice' else '' }}"
+  - "{{ '*/app/services' if project_type != 'api-microservice' else '' }}"
+  - "{{ '*/app/repositories' if project_type != 'api-microservice' else '' }}"
