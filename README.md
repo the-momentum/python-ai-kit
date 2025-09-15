@@ -1,3 +1,6 @@
+## How to use this
+`copier copy . <target_path_of_create_project>`
+
 ## API Architecture
 
 ### Database

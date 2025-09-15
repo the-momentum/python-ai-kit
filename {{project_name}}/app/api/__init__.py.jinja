@@ -6,7 +6,12 @@ from app.api.routes.v1.user import router as user_router_v1
 {% endif %}
 
 
+{% if project_type == "agent" %}
 __all__ = [
-    "{{'chat_router_v1' if project_type == 'agent' else ''}}",
-    "{{'user_router_v1' if project_type == 'api-microservice' else ''}}",
+    "chat_router_v1",
 ]
+{% elif project_type == "api-microservice" %}
+__all__ = [
+    "user_router_v1",
+]
+{% endif %}
