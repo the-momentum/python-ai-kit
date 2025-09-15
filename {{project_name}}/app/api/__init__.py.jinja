@@ -1,8 +1,17 @@
 {% if project_type == "agent" %}
-from app.api.endpoints.v1.chat import chat_router
+from app.api.routes.v1.chat import chat_router_v1
+{% endif %}
+{% if project_type == "api-microservice" %}
+from app.api.routes.v1.user import router as user_router_v1
 {% endif %}
 
 
+{% if project_type == "agent" %}
 __all__ = [
-    "{{'chat_router' if project_type == 'agent' else ''}}",
+    "chat_router_v1",
 ]
+{% elif project_type == "api-microservice" %}
+__all__ = [
+    "user_router_v1",
+]
+{% endif %}
