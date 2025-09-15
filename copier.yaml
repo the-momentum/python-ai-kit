@@ -59,6 +59,7 @@ _exclude:
   - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
 
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
+  - "{{ '*/app/utils' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   
   - "{{ '*/app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
 
@@ -66,8 +67,10 @@ _exclude:
 
   - "{{ '*/app/api.py' if project_type != 'api-monolith' else '' }}"
   - "{{ '*/app/user' if project_type != 'api-monolith' else '' }}"
+  - "{{ '*/app/__init__.py' if project_type != 'api-monolith' else '' }}"
 
   - "{{ '*/app/models' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/schemas' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/services' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/repositories' if project_type != 'api-microservice' else '' }}"
+  - "{{ '*/app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"

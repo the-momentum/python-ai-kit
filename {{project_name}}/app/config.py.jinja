@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     {% if project_type == "agent" %}
     # AGENT SETTINGS
     api_key: str
-    model: str = "gtp-4o"
+    model: str = "gpt-4o"
     mcp_url: str = "http://127.0.0.1:8000/mcp" # include "/mcp" endpoint
     {% endif %}
 

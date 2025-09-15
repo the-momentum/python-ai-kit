@@ -1,3 +1,4 @@
+{% if project_type == "api-monolith" %}
 import traceback
 
 try:
@@ -5,3 +6,4 @@ try:
 except ImportError:
     traceback.print_exc()
     raise
+{% endif %}

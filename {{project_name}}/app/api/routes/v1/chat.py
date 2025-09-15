@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from app.api.deps import get_initialized_agent
 
 
-chat_router = APIRouter()
+router = APIRouter()
 
 class ChatRequest(BaseModel):
     message: str
@@ -12,7 +12,7 @@ class ChatResponse(BaseModel):
     response: str
     error: str | None= None
 
-@chat_router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, agent=Depends(get_initialized_agent)):
     """Simple chat endpoint for the agent"""
     try:
