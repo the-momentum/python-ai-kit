@@ -16,8 +16,7 @@ dependencies = [
     "fastmcp>=2.12.2",
     "pydantic>=2.11.7",
     {% elif project_type == "agent" %}
-    "llama-index>=0.13.3",
-    "llama-index-tools-mcp>=0.4.0",
+    "pydantic-ai-slim[mcp]>=1.0.8",
     {% endif %}
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     "fastapi>=0.116.1",
