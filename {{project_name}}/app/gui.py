@@ -3,16 +3,29 @@ import time
 import os
 
 import streamlit as st
+from streamlit.errors import StreamlitSecretNotFoundError
 from openai import AuthenticationError
+from pydantic_core._pydantic_core import ValidationError
 
-os.environ["API_KEY"] = st.secrets["API_KEY"]
+# Try to authenticate with streamlit secrets
+# if .env doesn't provide an api key
+try:
+    from app.config import settings
+    os.environ["API_KEY"] = settings.api_key
+except ValidationError:
+    try:
+        os.environ["API_KEY"] = st.secrets["API_KEY"]
+    except StreamlitSecretNotFoundError:
+        st.warning("Provide a valid API key.")
+        raise
+
 from app.agent import AgentManager
 
 
 agent_manager = AgentManager()
 
 if os.environ.get("API_KEY") == "":
-    st.markdown("Please provide an API key in .streamlit/secrets.toml to continue...")
+    st.warning("Please provide an API key in .streamlit/secrets.toml to continue...")
 else:
     try:
         asyncio.run(agent_manager.initialize())
