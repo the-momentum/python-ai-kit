@@ -5,10 +5,9 @@ import os
 import streamlit as st
 from openai import AuthenticationError
 
+os.environ["API_KEY"] = st.secrets["API_KEY"]
 from app.agent import AgentManager
 
-
-os.environ["API_KEY"] = st.secrets["API_KEY"]
 
 agent_manager = AgentManager()
 
