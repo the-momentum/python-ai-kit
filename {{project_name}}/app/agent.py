@@ -19,9 +19,12 @@ class AgentManager:
     async def initialize(self, provider: str = settings.ai_provider, model: str = settings.model, system_prompt: str | None = None):
         if self._initialized:
             return
-        
-        self.mcp_client = MCPServerStreamableHTTP(settings.mcp_url)
-        
+        try:
+            self.mcp_client = MCPServerStreamableHTTP(settings.mcp_url)
+        except Exception as e:
+            self.mcp_client = None
+            raise ConnectionError("Could not connect to MCP server") from e
+
         if system_prompt is None:
             system_prompt = "You are an AI assistant to help the user as best as you can. You can use the tools provided to you to help the user."
         
@@ -29,7 +32,7 @@ class AgentManager:
         self._initialized = True
     
     def _create_agent(self, model: str, system_prompt: str) -> Agent:
-        model = OpenAIChatModel(model, provider=OpenAIProvider(api_key=settings.api_key))   
+        model = OpenAIChatModel(model, provider=OpenAIProvider(api_key=settings.api_key))
         return Agent(
             model=model,
             deps_type=dict[str, str],
