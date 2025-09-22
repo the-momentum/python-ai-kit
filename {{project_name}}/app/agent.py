@@ -2,7 +2,6 @@ import asyncio
 
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
-# from pydantic_ai.providers.ollama import OllamaProvider
 from pydantic_ai import Agent
 from pydantic_ai.tools import Tool
 from pydantic_ai.mcp import MCPServerStreamableHTTP
@@ -34,7 +33,6 @@ class AgentManager:
     
     def _create_agent(self, model: str, system_prompt: str) -> Agent:
         model = OpenAIChatModel(model, provider=OpenAIProvider(api_key=settings.api_key))
-        # model = OpenAIChatModel(model_name='llama3', provider=OllamaProvider(base_url='http://localhost:11434'))
         return Agent(
             model=model,
             deps_type=dict[str, str],

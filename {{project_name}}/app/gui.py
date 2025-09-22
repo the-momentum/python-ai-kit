@@ -55,7 +55,7 @@ st.divider()
 # ---------- sidebar ----------
 
 with st.sidebar:
-    if st.button("New chat"):
+    if st.button("New chat", icon="💡"):
         st.session_state.chats += 1
         st.session_state.active_chat = st.session_state.chats
     st.divider()
