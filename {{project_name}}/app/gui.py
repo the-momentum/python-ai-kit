@@ -7,12 +7,12 @@ from streamlit.errors import StreamlitSecretNotFoundError
 from openai import AuthenticationError
 from pydantic_core._pydantic_core import ValidationError
 
+from app.config import settings
+os.environ["API_KEY"] = settings.api_key
+
 # Try to authenticate with streamlit secrets
 # if .env doesn't provide an api key
-try:
-    from app.config import settings
-    os.environ["API_KEY"] = settings.api_key
-except ValidationError:
+if settings.api_key == "":
     try:
         os.environ["API_KEY"] = st.secrets["API_KEY"]
     except StreamlitSecretNotFoundError:
@@ -24,13 +24,10 @@ from app.agent import AgentManager
 
 agent_manager = AgentManager()
 
-if os.environ.get("API_KEY") == "":
-    st.warning("Please provide an API key in .streamlit/secrets.toml to continue...")
-else:
-    try:
-        asyncio.run(agent_manager.initialize())
-    except ExceptionGroup:
-        st.markdown("Couldn't initialize the agent...")
+try:
+    asyncio.run(agent_manager.initialize())
+except ExceptionGroup:
+    st.markdown("Failed to initialize the agent...")
 
 
 if "chats" not in st.session_state:
@@ -55,8 +52,7 @@ with st.sidebar:
         st.session_state.active_chat = st.session_state.chats
     st.divider()
     st.session_state.chat_buttons = []
-    for i in range(st.session_state["chats"]):
-        i += 1
+    for i in range(1, st.session_state["chats"] + 1):
         if st.button(f"Chat {i}", key=f"chat{i}"):
             st.session_state.active_chat = i
 
@@ -86,8 +82,8 @@ if prompt := st.chat_input("Ask me something"):
         except AuthenticationError:
             st.warning("Please provide an api key in .env")
             response = ""
-        except RuntimeError:
-            st.warning("Agent not initialized.")
+        except (ExceptionGroup, RuntimeError):
+            st.warning("Failed to connect with MCP server.")
             response = ""
 
         # Split response into chunks to imitate AI behaviour
