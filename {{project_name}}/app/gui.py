@@ -40,11 +40,11 @@ if "active_chat" not in st.session_state:
     st.session_state.active_chat = 1
 
 
-def geticon(i: int) -> str:
-    return '📌' if i == st.session_state.active_chat else '💤'
+def geticon(chat_number: int) -> str:
+    return '📌' if chat_number == st.session_state.active_chat else '💤'
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------
 
 st.title(":robot: Your AI Assistant :robot:")
 
@@ -59,10 +59,10 @@ with st.sidebar:
         st.session_state.chats += 1
         st.session_state.active_chat = st.session_state.chats
     st.divider()
-    for i in range(1, st.session_state["chats"] + 1):
-        if st.button(f"Chat {i}",
-                     key=f"chat{i}", icon=geticon(i)):
-            st.session_state.active_chat = i
+    for chat_nr in range(1, st.session_state["chats"] + 1):
+        if st.button(f"Chat {chat_nr}",
+                     key=f"chat{chat_nr}", icon=geticon(chat_nr)):
+            st.session_state.active_chat = chat_nr
             st.rerun()
 
 # -----------------------------
@@ -106,6 +106,6 @@ if prompt := st.chat_input("Ask me something"):
         st.session_state[f"messages{st.session_state["active_chat"]}"].append({"role": "assistant", "text": full_response})
 
 
-# ----------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------
 
 
