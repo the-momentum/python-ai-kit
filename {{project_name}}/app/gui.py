@@ -46,7 +46,7 @@ def geticon(i: int) -> str:
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-st.title("Your AI Assistant")
+st.title(":robot: Your AI Assistant :robot:")
 
 
 st.divider()
