@@ -18,7 +18,7 @@ project_name:
     {% if project_name | length < 1 %}
     project_name must cannot be empty string
     {% endif %}
-    {% if not (project_name | regex_search('^[a-z][a-z0-9\-]+$')) %}
+    {% if not (project_name | regex_search('^[a-zA-Z][a-z0-9\-]+$')) %}
     project_name must start with a letter, followed one or more letters, digits or dashes (all lowercase).
     {% endif %}
 

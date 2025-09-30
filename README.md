@@ -4,6 +4,11 @@ A production-ready framework for building AI agents that actually work in produc
 
 ## 🚀 Quick Start
 
+First, you need to have `copier` installed. We suggest to do it with `uv` (https://docs.astral.sh/uv/getting-started/installation/#installation-methods):
+```bash
+uv tool install copier
+```
+
 To use this template, run:
 
 ```bash
