@@ -19,18 +19,19 @@ except (ValidationError, AttributeError):
         st.warning("Provide a valid API key.")
         raise
 
-if "MCP_URL" in st.secrets:
-    os.environ["MCP_URL"] = st.secrets["MCP_URL"]
+try:
+    if "MCP_URL" in st.secrets:
+        os.environ["MCP_URL"] = st.secrets["MCP_URL"]
+except StreamlitSecretNotFoundError:
+    # No secrets file found, use config defaults
+    pass
 
-from app.agent import AgentManager
-
-
-agent_manager = AgentManager()
+from app.agent.agent_manager import agent_manager
 
 try:
     asyncio.run(agent_manager.initialize())
-except ExceptionGroup:
-    st.markdown("Failed to initialize the agent...")
+except Exception as e:
+    st.markdown(f"Failed to initialize the agent: {e}")
     raise
 
 
@@ -55,10 +56,25 @@ st.divider()
 # ---------- sidebar ----------
 
 with st.sidebar:
+    st.header("Settings")
+    
+    use_mcp = st.checkbox(
+        "Enable MCP Server", 
+        value=settings.mcp_enabled,
+        help="Enable Model Context Protocol server integration"
+    )
+    
+    if use_mcp:
+        st.info(f"MCP URL: {settings.mcp_url}")
+    
+    st.divider()
+    
     if st.button("New chat", icon="💡"):
         st.session_state.chats += 1
         st.session_state.active_chat = st.session_state.chats
+    
     st.divider()
+    
     for chat_nr in range(1, st.session_state["chats"] + 1):
         if st.button(f"Chat {chat_nr}",
                      key=f"chat{chat_nr}", icon=geticon(chat_nr)):
@@ -87,13 +103,19 @@ if prompt := st.chat_input("Ask me something"):
 
         try:
             with st.spinner("running...", show_time=True):
+                # Reinitialize agent with current MCP setting if needed
+                mcp_url = settings.mcp_url if use_mcp else None
+                if not agent_manager.is_initialized() or agent_manager.agent.mcp_url != mcp_url:
+                    asyncio.run(agent_manager.close())
+                    asyncio.run(agent_manager.initialize(use_mcp=use_mcp, mcp_url=mcp_url))
+                
                 response = asyncio.run(agent_manager.handle_message(prompt))
         except AuthenticationError:
             st.warning("Please provide an api key in .env")
             response = ""
             raise
-        except (ExceptionGroup, RuntimeError):
-            st.warning("Failed to connect with agent or MCP server.")
+        except (ExceptionGroup, RuntimeError) as e:
+            st.warning(f"Failed to connect with agent or MCP server: {e}")
             response = ""
             raise
 
@@ -107,5 +129,3 @@ if prompt := st.chat_input("Ask me something"):
 
 
 # ---------------------------------------------------------------
-
-

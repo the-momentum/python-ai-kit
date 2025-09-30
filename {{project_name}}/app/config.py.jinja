@@ -31,10 +31,14 @@ class Settings(BaseSettings):
 
     {% if project_type == "agent" %}
     # AGENT SETTINGS
+    debug_mode: bool = False
     api_key: str
     ai_provider: str = "openai"
     model: str = "gpt-4o"
     mcp_url: str = "http://127.0.0.1:8000/mcp" # include "/mcp" endpoint
+    mcp_enabled: bool = True
+    timeout: int = 360
+    default_language: str = "english"
     {% endif %}
 
     {% if project_type in ["api-monolith", "api-microservice"] %}

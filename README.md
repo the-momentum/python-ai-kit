@@ -1,37 +1,86 @@
-## How to use this
-`copier copy . <target_path_of_create_project>`
+# Python AI Kit
 
-## API Architecture
+A production-ready framework for building AI agents that actually work in production.
 
-### Database
-1. SQLAlchemy base model with auto-generated `__tablename__` and `type_annotation_map` for more strict python to SQL type conversion.
-2. Local database session defines on reusable database pools.
-3. Custom types (with `type` keyword - python 3.12+) which require custom mapping in `type_annotation_map`.
-4. Generic `mapped_column` helpers.
+## 🚀 Quick Start
 
-### Repositories
-1. All basic CRUD repositories defined as generic methods.
-2. Works as a layer to communicate with database only.
+To use this template, run:
 
-### Services
-1. Generic services are in line with corresponding CRUD repositories.
-2. Adding to repositories layers with data validation, exceptions handling and logging.
-3. Errors are handled by using `@handle_exceptions` decorator, which use single dispatch pattern. All missing exceptions should be handled in `app/utils/exceptions.py` like:
-```py
-@handle_exception.register
-def _(exc: YourCustomException, _: str) -> HTTPException:
-    return HTTPException(status_code=404, detail={your details})
+```bash
+copier copy . <target_path_of_create_project>
 ```
 
-### Sub-applications models
-1. Should use just `Mapped`. If `mapped_column` is needed, it's better to create new generic helper in `app/database.py`.
+This will generate a new project based on the template with all the necessary files and structure.
 
-### Sub-applications services
-1. Both concrete repositories and services should be created from generic instances. All additional methods should be defined here. If repositories needs to be splitted into different modules, it's suggested to use inheritance and keep all the methods in one repository class.
+## Features
 
-### Sub-applications views
-1. API endpoint, which use services to perform operations.
-2. Services return SQLALchemy models, but `@router.HTTP_METHOD` decorator should use `response_model` parameter to automatically transform them into pydantic models (which should be defined in sub-application `schemas.py`).
-3. `@format_response` decorator (which is implemented using decorator factory pattern in `app/utils/api_utils/py`) transforms pydantic object response into JSONResposne with HATEOAS links attached to create RESTful API.
-4. Additional relations (like user_rels in the example) will be added to HATEOAS links.
-5. Default status code is 200. If another is required, should be defined in both decorators (`@router` add information to swagger docs, while `@format_response` make sure it will be status code returned by an endpoint).
+### Core Framework
+- **Multi-agent orchestration** - Built-in support for coordinating multiple specialized agents with defined workflows and error handling
+- **State management** - Persistent memory across sessions using dedicated database storage and thread preservation
+- **Observability by default** - Integrated logging, tracing, and monitoring with Pydantic Logfire or Opik
+- **Structured prompt management** - Modular, versioned prompts with POML patterns instead of monolithic strings
+
+### Development & Testing
+- **Automated evaluation pipeline** - Integrated Ragas/Opik evaluators with quantifiable metrics, not "by feel" testing
+- **Prompt versioning system** - Track changes, rollback, and compare prompt iterations using database or JSON storage
+- **Built-in testing patterns** - Standard test structures for agentic logic, not just code structure
+- **Code standards enforcement** - Pre-configured linters and formatters that understand AI agent patterns
+
+### Production Readiness
+- **Security hardened** - Fernet encryption for API keys, SOPS standard support, no exposed credentials
+- **Artifact management** - Proper handling of RAG contents, static files, and model storage without cluttering repos
+- **Workflow control** - Template-based routing with custom error handling and predictable execution paths
+- **MLOps pipeline** - Deployment patterns for custom models and retraining workflows
+
+### Integration & Compatibility
+- **Curated tool ecosystem** - Pre-integrated best-of-breed tools that actually work together
+- **Framework flexibility** - Strong core with optional features, avoiding both barebones implementations and bloated abstractions
+- **Standard interfaces** - Consistent APIs across components, minimal manual adjustments needed
+
+## Why Use Python AI Kit
+
+**You're tired of stitching tools together.** Every AI agent project feels like forcing incompatible blocks to work. You spend more time debugging integrations than building features.
+
+**You can't review prompt changes with confidence.** Merge requests for prompts are guesswork. Small changes cause unpredictable behavior. You have no baseline to compare against.
+
+**Your agents lose context between sessions.** Users complain that the agent "forgets" previous conversations. You've bolted on hacky state management that breaks under load.
+
+**Testing is a manual nightmare.** You ask your agent arbitrary questions and judge responses subjectively. There are no metrics. You can't prove your changes made things better or worse.
+
+**You can't explain why the agent did something.** When things go wrong in production, you have no visibility into the decision chain. This is a non-starter in regulated industries.
+
+**You're rebuilding patterns from scratch every time.** There's no standard way to structure agents. Every project starts at zero. Code reviews are inconsistent because there's no established patterns.
+
+**Security is an afterthought.** API keys in environment variables. Secrets committed to repos. You know it's wrong but there's no easy alternative baked in.
+
+This framework solves these problems by integrating proven solutions into a cohesive platform. Not another thin wrapper - battle-tested patterns for the entire development lifecycle.
+
+## 📚 Documentation
+
+- [**API Architecture**](docs/api-architecture.md) - Learn about the database, repositories, services, and API design patterns
+- [**Agents**](docs/agents.md) - Instructions for running and working with AI agents
+
+## 🎯 Project Types
+
+This template generates projects optimized for:
+
+- **Microservice API** - Lightweight, focused services with minimal dependencies
+- **Monolith Service API** - Full-featured applications with comprehensive architecture layers
+- **MCP Server** - Model Context Protocol servers for AI tool integration
+- **AI Agent** - Intelligent agent systems with workflow and tool management
+
+Each generated project includes modern Python tooling, comprehensive testing, and production-ready architecture patterns.
+
+## 📁 Project Structure
+
+The generated project includes:
+- FastAPI-based API with proper architecture layers
+- SQLAlchemy database models and repositories
+- Service layer with error handling
+- AI agent integration with Streamlit GUI
+- Comprehensive testing setup
+- Modern Python tooling (uv, ruff, etc.)
+
+---
+
+*For detailed information about specific components, please refer to the linked documentation pages above.*
