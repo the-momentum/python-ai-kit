@@ -1,12 +1,9 @@
-{% if project_type == "agent" %}
 from app.agent.engines.routers import GenericRouter
 from app.agent.engines.guardrails import OutputReformatterWorker
 from app.agent.agent_manager import agent_manager
 from app.config import settings
-{% endif %}
 
 
-{% if project_type == "agent" %}
 async def get_workflow_dependencies(mcp_url: str | None = None):
     """Get dependencies needed for the workflow"""
     use_mcp = mcp_url is not None
@@ -28,4 +25,3 @@ async def get_workflow_dependencies(mcp_url: str | None = None):
         'guardrails': guardrails,
         'language': settings.default_language
     }
-{% endif %}
