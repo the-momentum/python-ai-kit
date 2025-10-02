@@ -52,7 +52,9 @@ default_python_version:
     {% endfor %}
 
 _exclude:
+  - /.github
   - /docs
+  - /LICENSE
   - /README.md
   - copier.yaml
   - .git
