@@ -4,6 +4,7 @@ from app.agent.engines.guardrails import OutputReformatterWorker
 from app.agent.engines.react_agent import ReasoningAgent
 from app.agent.engines.translators import SimpleTranslatorWorker
 from app.config import settings
+from pydantic_ai import UsageLimits
 
 
 class WorkflowAgentFactory:
@@ -29,6 +30,14 @@ class WorkflowAgentFactory:
         
         final_mcp_urls = mcp_urls if mcp_urls is not None else (settings.mcp_urls if use_mcp else [])
         
+        usage_limits = None
+        if any([settings.max_output_tokens, settings.max_input_tokens, settings.max_requests]):
+            usage_limits = UsageLimits(
+                output_tokens_limit=settings.max_output_tokens,
+                input_tokens_limit=settings.max_input_tokens,
+                request_limit=settings.max_requests,
+            )
+        
         manager.register('router', GenericRouter,
             verbose=settings.debug_mode,
             api_key=settings.api_key)
@@ -37,16 +46,19 @@ class WorkflowAgentFactory:
             verbose=settings.debug_mode,
             api_key=settings.api_key,
             language=language,
-            mcp_urls=final_mcp_urls)
+            mcp_urls=final_mcp_urls,
+            usage_limits=usage_limits)
         
         manager.register('guardrails', OutputReformatterWorker,
             verbose=settings.debug_mode,
             api_key=settings.api_key,
-            language=language)
+            language=language,
+            usage_limits=usage_limits)
         
         manager.register('translator', SimpleTranslatorWorker,
             verbose=settings.debug_mode,
-            target_language=language)
+            target_language=language,
+            usage_limits=usage_limits)
         
         await manager.initialize()
         return manager
