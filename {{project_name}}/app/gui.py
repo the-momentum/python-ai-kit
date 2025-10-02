@@ -20,8 +20,11 @@ except (ValidationError, AttributeError):
         raise
 
 try:
-    if "MCP_URL" in st.secrets:
-        os.environ["MCP_URL"] = st.secrets["MCP_URL"]
+    if "MCP_URLS" in st.secrets:
+        mcp_urls = st.secrets["MCP_URLS"]
+        if isinstance(mcp_urls, str):
+            mcp_urls = [url.strip() for url in mcp_urls.split(",") if url.strip()]
+        os.environ["MCP_URLS"] = ",".join(mcp_urls)
 except StreamlitSecretNotFoundError:
     # No secrets file found, use config defaults
     pass
@@ -36,6 +39,8 @@ if "chats" not in st.session_state:
     st.session_state.chats = 1
 if "active_chat" not in st.session_state:
     st.session_state.active_chat = 1
+if "mcp_urls" not in st.session_state:
+    st.session_state.mcp_urls = []
 
 
 def geticon(chat_number: int) -> str:
@@ -56,15 +61,57 @@ with st.sidebar:
     st.header("Settings")
     
     use_mcp = st.checkbox(
-        "Enable MCP Server", 
+        "Enable MCP Servers", 
         value=settings.mcp_enabled,
         help="Enable Model Context Protocol server integration"
     )
     
     if use_mcp:
-        url = st.text_input("MCP URL", "http://127.0.0.1:8000/mcp")
-        settings.mcp_url = url
-        os.environ["MCP_URL"] = url
+        st.subheader("MCP Server URLs")
+        
+        if not st.session_state.mcp_urls:
+            st.info("📡 No MCP servers configured. Add URLs below to enable MCP integration.")
+        else:
+            st.info(f"📡 {len(st.session_state.mcp_urls)} MCP server(s) configured")
+        
+        # Display current URLs
+        for i, url in enumerate(st.session_state.mcp_urls):
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.text_input(f"URL {i+1}", value=url, key=f"mcp_url_{i}", disabled=True)
+            with col2:
+                if st.button("🗑️", key=f"delete_{i}", help="Delete this URL"):
+                    st.session_state.mcp_urls.pop(i)
+                    st.rerun()
+        
+        # Add new URL
+        new_url = st.text_input("Add new MCP URL", placeholder="http://127.0.0.1:8000/mcp")
+        if st.button("Add URL") and new_url:
+            # Validate URL format
+            if not new_url.startswith(('http://', 'https://')):
+                st.error("URL must start with http:// or https://")
+            elif new_url in st.session_state.mcp_urls:
+                st.warning("URL already exists")
+            else:
+                st.session_state.mcp_urls.append(new_url)
+                st.rerun()
+        
+        # Test MCP connection button
+        if st.button("Test MCP Connection", help="Test if MCP servers are reachable", disabled=not st.session_state.mcp_urls):
+            with st.spinner("Testing MCP connections..."):
+                try:
+                    # Test with a simple manager creation
+                    test_manager = asyncio.run(WorkflowAgentFactory.create_manager(
+                        use_mcp=True,
+                        mcp_urls=st.session_state.mcp_urls
+                    ))
+                    st.success("✅ All MCP servers are reachable!")
+                except Exception as e:
+                    st.error(f"❌ MCP connection failed: {str(e)}")
+                    st.info("Check if your MCP servers are running and URLs are correct.")
+        
+        # Update settings with current URLs
+        settings.mcp_urls = st.session_state.mcp_urls.copy()
     
     st.divider()
     
@@ -102,13 +149,25 @@ if prompt := st.chat_input("Ask me something"):
 
         try:
             with st.spinner("running...", show_time=True):
-                mcp_url = settings.mcp_url if use_mcp else None
+                mcp_urls = st.session_state.mcp_urls if use_mcp else None
                 
-                manager = asyncio.run(WorkflowAgentFactory.create_manager(
-                    use_mcp=use_mcp,
-                    mcp_url=mcp_url,
-                    target_language=settings.default_language
-                ))
+                # Try with MCP first, fallback to without MCP if it fails
+                try:
+                    manager = asyncio.run(WorkflowAgentFactory.create_manager(
+                        use_mcp=use_mcp,
+                        mcp_urls=mcp_urls,
+                        target_language=settings.default_language
+                    ))
+                except Exception as mcp_error:
+                    if use_mcp and ("MCP" in str(mcp_error) or "mcp" in str(mcp_error)):
+                        st.warning("MCP servers failed, running without MCP...")
+                        manager = asyncio.run(WorkflowAgentFactory.create_manager(
+                            use_mcp=False,
+                            mcp_urls=None,
+                            target_language=settings.default_language
+                        ))
+                    else:
+                        raise mcp_error
                 
                 initial_state = WorkflowState()
                 
@@ -129,7 +188,12 @@ if prompt := st.chat_input("Ask me something"):
             response = ""
             raise
         except (ExceptionGroup, RuntimeError) as e:
-            st.warning(f"Failed to connect with agent or MCP server: {e}")
+            error_msg = str(e)
+            if "MCP" in error_msg or "mcp" in error_msg:
+                st.warning(f"Failed to connect to MCP servers. Please check your URLs: {st.session_state.mcp_urls}")
+                st.info("You can disable MCP servers or fix the URLs in the sidebar.")
+            else:
+                st.warning(f"Failed to connect with agent: {error_msg}")
             response = ""
             raise
 

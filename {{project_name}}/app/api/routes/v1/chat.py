@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000, description="User message")
     use_mcp: bool = Field(default=settings.mcp_enabled, description="Enable MCP server integration")
+    mcp_urls: list[str] | None = Field(default=None, description="List of MCP server URLs")
 
 
 class ChatResponse(BaseModel):
@@ -29,11 +30,11 @@ async def chat(request: ChatRequest):
     logger.info(f"Received chat request: {request.message[:50]}... (MCP: {request.use_mcp})")
     
     try:
-        mcp_url = settings.mcp_url if request.use_mcp else None
+        mcp_urls = request.mcp_urls if request.use_mcp else None
         
         manager = await WorkflowAgentFactory.create_manager(
             use_mcp=request.use_mcp,
-            mcp_url=mcp_url,
+            mcp_urls=mcp_urls,
             target_language=settings.default_language
         )
         
