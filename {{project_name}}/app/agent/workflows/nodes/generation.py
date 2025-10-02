@@ -11,6 +11,10 @@ class GenerateNode(BaseNode[WorkflowState, dict, str]):
     
     async def run(self, ctx: GraphRunContext[WorkflowState, dict]) -> 'GuardrailsNode':
         agent = ctx.deps['agent']
-        response = await agent.generate_response(ctx.state.current_message, [])
+        chat_history = ctx.deps.get('chat_history', [])
+        response = await agent.generate_response(
+            ctx.state.current_message, 
+            chat_history
+        )
         ctx.state.generated_response = str(response.output)
         return GuardrailsNode()
