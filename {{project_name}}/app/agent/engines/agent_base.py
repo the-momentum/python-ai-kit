@@ -1,7 +1,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from typing import Any, Type
-from pydantic_ai import Agent, RunContext
+from pydantic_ai import Agent, RunContext, UsageLimits
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.result import AgentRunResult
 from pydantic_ai.mcp import MCPServerStreamableHTTP
@@ -33,12 +33,14 @@ class BaseAgent(ABC):
         output_type: Any = None,
         instructions: str | None = None,
         mcp_urls: list[str] | None = None,
+        usage_limits: UsageLimits | None = None,
         **kwargs
     ) -> None:
         self.language = language
         self.verbose = verbose
         self.chat_history: list[ModelMessage] = []
         self.mcp_urls = mcp_urls or []
+        self.usage_limits = usage_limits
         
         set_api_key_for_vendor(llm_vendor, api_key)
         
@@ -90,11 +92,16 @@ class BaseAgent(ABC):
         """Generate response using Pydantic AI agent."""
         deps = BaseAgentDeps(language=self.language)
         
-        result = await self.agent.run(
-            user_prompt=query,
-            message_history=chat_history,
-            deps=deps,
-        )
+        run_kwargs = {
+            'user_prompt': query,
+            'message_history': chat_history,
+            'deps': deps,
+        }
+        
+        if self.usage_limits:
+            run_kwargs['usage_limits'] = self.usage_limits
+        
+        result = await self.agent.run(**run_kwargs)
         
         if self.verbose:
             print(f"Usage: {result.usage()}")

@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     timeout: int = 360
     default_language: str = "english"
 
+    max_output_tokens: int | None = None
+    max_input_tokens: int | None = None
+    max_requests: int | None = None
+
     @field_validator('mcp_urls', mode='before')
     @classmethod
     def parse_mcp_urls(cls, v):

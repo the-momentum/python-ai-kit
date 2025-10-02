@@ -6,6 +6,7 @@ import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
 from openai import AuthenticationError
 from pydantic_core._pydantic_core import ValidationError
+from pydantic_ai.exceptions import UsageLimitExceeded
 
 try:
     from app.config import settings
@@ -73,6 +74,28 @@ with st.sidebar:
         st.session_state.default_language = selected_language
         st.rerun()
     
+    # Token limits
+    st.subheader("Token Limits")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        max_output_tokens = st.number_input(
+            "Max Output Tokens",
+            value=settings.max_output_tokens or 100000,
+            help="Maximum tokens for AI responses"
+        )
+    with col2:
+        max_input_tokens = st.number_input(
+            "Max Input Tokens", 
+            value=settings.max_input_tokens or 100000,
+            help="Maximum tokens for input context"
+        )
+    
+    settings.max_output_tokens = max_output_tokens
+    settings.max_input_tokens = max_input_tokens
+    
+    st.divider()
+    
     # MCP settings
     use_mcp = st.checkbox(
         "📡 Enable MCP Servers", 
@@ -106,20 +129,6 @@ with st.sidebar:
             else:
                 st.session_state.mcp_urls.append(new_url)
                 st.rerun()
-        
-        # Test MCP connection button
-        if st.button("Test MCP Connection", help="Test if MCP servers are reachable", disabled=not st.session_state.mcp_urls):
-            with st.spinner("Testing MCP connections..."):
-                try:
-                    test_manager = asyncio.run(WorkflowAgentFactory.create_manager(
-                        use_mcp=True,
-                        mcp_urls=st.session_state.mcp_urls,
-                        language=st.session_state.default_language
-                    ))
-                    st.success("✅ All MCP servers are reachable!")
-                except Exception as e:
-                    st.error(f"❌ MCP connection failed: {str(e)}")
-                    st.info("Check if your MCP servers are running and URLs are correct.")
         
         settings.mcp_urls = st.session_state.mcp_urls.copy()
     
@@ -250,11 +259,23 @@ if prompt := st.chat_input("Ask me something"):
                 )
                 
                 response = result.output
+        except UsageLimitExceeded as e:
+            st.warning(f"⚠️ Token limit exceeded: {str(e)}")
+            st.info("💡 Try reducing your message length or increasing token limits in settings.")
+            response = "I apologize, but I've reached the token limit for this response. Please try with a shorter message or adjust the token limits in settings."
+        except ExceptionGroup as e:
+            error_msg = str(e)
+            st.warning(f"🔌 MCP Server Connection Error: {error_msg}")
+            st.info("💡 This usually means one or more MCP servers are unreachable. Check your URLs in the sidebar:")
+            for i, url in enumerate(st.session_state.mcp_urls, 1):
+                st.text(f"  {i}. {url}")
+            st.info("You can disable MCP servers or fix the URLs in the sidebar.")
+            response = "I'm having trouble connecting to external tools. Please check your MCP server configuration or disable MCP servers in settings."
         except AuthenticationError:
             st.warning("Please provide an api key in .env")
             response = ""
             raise
-        except (ExceptionGroup, RuntimeError) as e:
+        except RuntimeError as e:
             error_msg = str(e)
             if "MCP" in error_msg or "mcp" in error_msg:
                 st.warning(f"Failed to connect to MCP servers. Please check your URLs: {st.session_state.mcp_urls}")
