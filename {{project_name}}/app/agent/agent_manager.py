@@ -1,68 +1,102 @@
-from app.agent.engines.react_agent import ReasoningAgent
-from app.config import settings
+from typing import Any, Callable
 
 
 class AgentManager:
-    """Centralized agent manager for both GUI and API usage."""
+    """Registry for agents, workers, and workflow components."""
     
     def __init__(self):
-        self.agent: ReasoningAgent | None = None
-        self._initialized = False
-        self._current_mcp_setting = None
+        self._agents: dict[str, Any] = {}
+        self._factories: dict[str, tuple[Callable, dict]] = {}
     
-    async def initialize(self, use_mcp: bool | None = None, mcp_url: str | None = None):
-        """Initialize the agent with optional MCP configuration."""
-        if self._initialized and self._current_mcp_setting == use_mcp:
-            return
+    def register(self, name: str, agent_class: type, **config) -> 'AgentManager':
+        """Register an agent with configuration (lazy initialization).
         
-        if use_mcp is None:
-            use_mcp = settings.mcp_enabled
-        
-        final_mcp_url = mcp_url if mcp_url is not None else (settings.mcp_url if use_mcp else None)
-        
-        self.agent = ReasoningAgent(
-            verbose=settings.debug_mode,
-            api_key=settings.api_key,
-            language=settings.default_language,
-            mcp_url=final_mcp_url
-        )
-        
-        self._initialized = True
-        self._current_mcp_setting = use_mcp
+        Args:
+            name: Unique agent identifier
+            agent_class: Agent class to instantiate
+            **config: Configuration parameters for agent constructor
+            
+        Returns:
+            Self for method chaining
+            
+        Example:
+            manager.register('router', GenericRouter, verbose=True, api_key="...")
+        """
+        self._factories[name] = (agent_class, config)
+        return self
     
-    async def handle_message(self, message: str) -> str:
-        """Handle a message and return the response."""
-        if not self._initialized:
-            raise RuntimeError("Agent not initialized. Call initialize() first.")
+    def register_instance(self, name: str, instance: Any) -> 'AgentManager':
+        """Register an existing agent instance.
         
-        result = await self.agent.generate_response(
-            query=message,
-            chat_history=self.agent.chat_history
-        )
-        
-        from pydantic_ai.messages import UserPromptPart, TextPart, ModelRequest, ModelResponse
-        user_message = ModelRequest(parts=[UserPromptPart(content=message)])
-        self.agent.chat_history.append(user_message)
-        
-        assistant_message = ModelResponse(parts=[TextPart(content=result.output)])
-        self.agent.chat_history.append(assistant_message)
-        
-        return result.output
+        Args:
+            name: Unique agent identifier
+            instance: Agent instance to register
+            
+        Returns:
+            Self for method chaining
+        """
+        self._agents[name] = instance
+        return self
     
-    def is_initialized(self) -> bool:
-        """Check if the agent is initialized."""
-        return self._initialized
+    async def initialize(self) -> None:
+        """Initialize all registered agents from factories."""
+        for name, (agent_class, config) in self._factories.items():
+            if name not in self._agents:
+                instance = agent_class(**config)
+                if hasattr(instance, 'initialize') and callable(getattr(instance, 'initialize')):
+                    init_method = getattr(instance, 'initialize')
+                    if callable(init_method):
+                        await init_method()
+                self._agents[name] = instance
     
-    async def close(self):
-        """Close the agent and clear chat history."""
-        if self.agent:
-            self.agent.chat_history = []
-        self._initialized = False
-        self._current_mcp_setting = None
+    def get(self, name: str) -> Any:
+        """Get agent by name.
+        
+        Args:
+            name: Agent identifier
+            
+        Returns:
+            Agent instance
+            
+        Raises:
+            KeyError: If agent not initialized
+        """
+        if name not in self._agents:
+            raise KeyError(f"Agent '{name}' not initialized. Call initialize() first.")
+        return self._agents[name]
     
-    def get_agent(self) -> ReasoningAgent  | None:
-        """Get the current agent instance."""
-        return self.agent
-
-
-agent_manager = AgentManager()
+    def has(self, name: str) -> bool:
+        """Check if agent is registered.
+        
+        Args:
+            name: Agent identifier
+            
+        Returns:
+            True if agent exists in registry
+        """
+        return name in self._agents or name in self._factories
+    
+    def to_deps(self, **extra_deps) -> dict[str, Any]:
+        """Convert all agents to dependencies dict for graph.
+        
+        Args:
+            **extra_deps: Additional dependencies (e.g. message, language, target_language)
+            
+        Returns:
+            Dictionary with agents + extra dependencies
+            
+        Example:
+            deps = manager.to_deps(message='Hello', language='english')
+        """
+        deps = dict(self._agents)
+        deps.update(extra_deps)
+        return deps
+    
+    def clear(self) -> None:
+        """Clear all registered agents and factories."""
+        self._agents.clear()
+        self._factories.clear()
+    
+    def list_agents(self) -> list[str]:
+        """List all registered agent names."""
+        return list(set(self._agents.keys()) | set(self._factories.keys()))

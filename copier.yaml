@@ -57,18 +57,23 @@ _exclude:
   - copier.yaml
   - .git
 
+  - "{{ '*/README_mcp-server.md' if project_type != 'mcp-server' else '' }}"
   - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
 
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   
+  - "{{ '*/README_api-microservice.md' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/schemas' if project_type not in ['api-microservice', 'agent'] else '' }}"
 
+  - "{{ '*/examples' if project_type != 'agent' else '' }}"
+  - "{{ '*/README_agent.md' if project_type != 'agent' else '' }}"
   - "{{ '*/app/agent' if project_type != 'agent' else '' }}"
   - "{{ '*/app/gui.py' if project_type != 'agent' else '' }}"
   - "{{ '*/app/utils/date_handlers.py' if project_type != 'agent' else '' }}"
   - "{{ '*/app/utils/llm_vendor.py' if project_type != 'agent' else '' }}"
 
+  - "{{ '*/README_api-monolith.md' if project_type != 'api-monolith' else '' }}"
   - "{{ '*/app/api.py' if project_type != 'api-monolith' else '' }}"
   - "{{ '*/app/user' if project_type != 'api-monolith' else '' }}"
 
@@ -77,3 +82,6 @@ _exclude:
   - "{{ '*/app/services' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/repositories' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"
+
+_tasks:
+  - "mv {{project_name}}/README_{{project_type}}.md {{project_name}}/README.md"

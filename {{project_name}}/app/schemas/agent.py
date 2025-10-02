@@ -23,3 +23,4 @@ class MessageRole(StrEnum):
 class TaskType(Enum):
     conversation = 1
     refuse = 2
+    translate = 3
