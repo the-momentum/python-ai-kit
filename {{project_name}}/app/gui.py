@@ -227,13 +227,24 @@ if prompt := st.chat_input("Ask me something"):
                 
                 initial_state = WorkflowState()
                 
+                # Convert Streamlit messages to Pydantic AI messages
+                chat_history = []
+                for msg in st.session_state[f"messages{st.session_state['active_chat']}"]:
+                    if msg["role"] == "human":
+                        from pydantic_ai.messages import ModelRequest, UserPromptPart
+                        chat_history.append(ModelRequest(parts=[UserPromptPart(content=msg["text"])]))
+                    elif msg["role"] == "assistant":
+                        from pydantic_ai.messages import ModelResponse, TextPart
+                        chat_history.append(ModelResponse(parts=[TextPart(content=msg["text"])]))
+                
                 result = asyncio.run(
                     user_assistant_graph.run(
                         start_node=StartNode(),
                         state=initial_state,
                         deps=manager.to_deps(
                             message=prompt,
-                            language=st.session_state.default_language
+                            language=st.session_state.default_language,
+                            chat_history=chat_history
                         )
                     )
                 )
