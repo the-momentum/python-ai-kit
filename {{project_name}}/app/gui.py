@@ -41,6 +41,8 @@ if "active_chat" not in st.session_state:
     st.session_state.active_chat = 1
 if "mcp_urls" not in st.session_state:
     st.session_state.mcp_urls = []
+if "default_language" not in st.session_state:
+    st.session_state.default_language = settings.default_language
 
 
 def geticon(chat_number: int) -> str:
@@ -51,7 +53,6 @@ def geticon(chat_number: int) -> str:
 
 st.title(":robot: Your AI Assistant :robot:")
 
-
 st.divider()
 
 
@@ -60,15 +61,26 @@ st.divider()
 with st.sidebar:
     st.header("Settings")
     
+    # Language settings
+    selected_language = st.text_input(
+        "🌍 Language",
+        value=st.session_state.default_language,
+        placeholder="e.g. english, polish, español, 中文, français...",
+        help="Language for AI responses and interface. You can use any language name."
+    )
+    
+    if selected_language and selected_language != st.session_state.default_language:
+        st.session_state.default_language = selected_language
+        st.rerun()
+    
+    # MCP settings
     use_mcp = st.checkbox(
-        "Enable MCP Servers", 
+        "📡 Enable MCP Servers", 
         value=settings.mcp_enabled,
         help="Enable Model Context Protocol server integration"
     )
     
     if use_mcp:
-        st.subheader("MCP Server URLs")
-        
         if not st.session_state.mcp_urls:
             st.info("📡 No MCP servers configured. Add URLs below to enable MCP integration.")
         else:
@@ -87,7 +99,6 @@ with st.sidebar:
         # Add new URL
         new_url = st.text_input("Add new MCP URL", placeholder="http://127.0.0.1:8000/mcp")
         if st.button("Add URL") and new_url:
-            # Validate URL format
             if not new_url.startswith(('http://', 'https://')):
                 st.error("URL must start with http:// or https://")
             elif new_url in st.session_state.mcp_urls:
@@ -100,32 +111,77 @@ with st.sidebar:
         if st.button("Test MCP Connection", help="Test if MCP servers are reachable", disabled=not st.session_state.mcp_urls):
             with st.spinner("Testing MCP connections..."):
                 try:
-                    # Test with a simple manager creation
                     test_manager = asyncio.run(WorkflowAgentFactory.create_manager(
                         use_mcp=True,
-                        mcp_urls=st.session_state.mcp_urls
+                        mcp_urls=st.session_state.mcp_urls,
+                        language=st.session_state.default_language
                     ))
                     st.success("✅ All MCP servers are reachable!")
                 except Exception as e:
                     st.error(f"❌ MCP connection failed: {str(e)}")
                     st.info("Check if your MCP servers are running and URLs are correct.")
         
-        # Update settings with current URLs
         settings.mcp_urls = st.session_state.mcp_urls.copy()
     
     st.divider()
     
-    if st.button("New chat", icon="💡"):
-        st.session_state.chats += 1
-        st.session_state.active_chat = st.session_state.chats
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        if st.button("New chat", icon="💡"):
+            st.session_state.chats += 1
+            st.session_state.active_chat = st.session_state.chats
+    with col2:
+        if st.button("🗑️", help="Delete current chat", disabled=st.session_state.chats <= 1):
+            # Delete current chat
+            current_chat = st.session_state.active_chat
+            if current_chat in st.session_state:
+                del st.session_state[f"messages{current_chat}"]
+            
+            # If deleting the last chat, create a new one
+            if st.session_state.chats == 1:
+                st.session_state.chats = 1
+                st.session_state.active_chat = 1
+            else:
+                # Shift chat numbers down
+                for i in range(current_chat + 1, st.session_state.chats + 1):
+                    if f"messages{i}" in st.session_state:
+                        st.session_state[f"messages{i-1}"] = st.session_state[f"messages{i}"]
+                        del st.session_state[f"messages{i}"]
+                
+                st.session_state.chats -= 1
+                if st.session_state.active_chat > st.session_state.chats:
+                    st.session_state.active_chat = st.session_state.chats
+            
+            st.rerun()
     
     st.divider()
     
     for chat_nr in range(1, st.session_state["chats"] + 1):
-        if st.button(f"Chat {chat_nr}",
-                     key=f"chat{chat_nr}", icon=geticon(chat_nr)):
-            st.session_state.active_chat = chat_nr
-            st.rerun()
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            if st.button(f"Chat {chat_nr}",
+                         key=f"chat{chat_nr}", icon=geticon(chat_nr)):
+                st.session_state.active_chat = chat_nr
+                st.rerun()
+        with col2:
+            if st.button("🗑️", key=f"delete_chat{chat_nr}", help="Delete this chat", disabled=st.session_state.chats <= 1):
+                # Delete specific chat
+                if f"messages{chat_nr}" in st.session_state:
+                    del st.session_state[f"messages{chat_nr}"]
+                
+                # Shift remaining chats down
+                for i in range(chat_nr + 1, st.session_state.chats + 1):
+                    if f"messages{i}" in st.session_state:
+                        st.session_state[f"messages{i-1}"] = st.session_state[f"messages{i}"]
+                        del st.session_state[f"messages{i}"]
+                
+                st.session_state.chats -= 1
+                if st.session_state.active_chat >= chat_nr and st.session_state.active_chat > 1:
+                    st.session_state.active_chat -= 1
+                elif st.session_state.active_chat > st.session_state.chats:
+                    st.session_state.active_chat = st.session_state.chats
+                
+                st.rerun()
 
 # -----------------------------
 
@@ -156,7 +212,7 @@ if prompt := st.chat_input("Ask me something"):
                     manager = asyncio.run(WorkflowAgentFactory.create_manager(
                         use_mcp=use_mcp,
                         mcp_urls=mcp_urls,
-                        target_language=settings.default_language
+                        language=st.session_state.default_language
                     ))
                 except Exception as mcp_error:
                     if use_mcp and ("MCP" in str(mcp_error) or "mcp" in str(mcp_error)):
@@ -164,7 +220,7 @@ if prompt := st.chat_input("Ask me something"):
                         manager = asyncio.run(WorkflowAgentFactory.create_manager(
                             use_mcp=False,
                             mcp_urls=None,
-                            target_language=settings.default_language
+                            language=st.session_state.default_language
                         ))
                     else:
                         raise mcp_error
@@ -177,7 +233,7 @@ if prompt := st.chat_input("Ask me something"):
                         state=initial_state,
                         deps=manager.to_deps(
                             message=prompt,
-                            language=settings.default_language
+                            language=st.session_state.default_language
                         )
                     )
                 )

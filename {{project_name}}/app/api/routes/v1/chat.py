@@ -35,7 +35,7 @@ async def chat(request: ChatRequest):
         manager = await WorkflowAgentFactory.create_manager(
             use_mcp=request.use_mcp,
             mcp_urls=mcp_urls,
-            target_language=settings.default_language
+            language=settings.default_language
         )
         
         initial_state = WorkflowState()
