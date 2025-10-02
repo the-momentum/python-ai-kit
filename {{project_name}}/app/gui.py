@@ -26,13 +26,10 @@ except StreamlitSecretNotFoundError:
     # No secrets file found, use config defaults
     pass
 
-from app.agent.agent_manager import agent_manager
-
-try:
-    asyncio.run(agent_manager.initialize())
-except Exception as e:
-    st.markdown(f"Failed to initialize the agent: {e}")
-    raise
+from app.agent.factories.workflow_factory import WorkflowAgentFactory
+from app.agent.workflows.agent_workflow import user_assistant_graph
+from app.agent.workflows.nodes import StartNode
+from app.agent.workflows.generation_events import WorkflowState
 
 
 if "chats" not in st.session_state:
@@ -105,13 +102,28 @@ if prompt := st.chat_input("Ask me something"):
 
         try:
             with st.spinner("running...", show_time=True):
-                # Reinitialize agent with current MCP setting if needed
                 mcp_url = settings.mcp_url if use_mcp else None
-                if not agent_manager.is_initialized() or agent_manager.agent.mcp_url != mcp_url:
-                    asyncio.run(agent_manager.close())
-                    asyncio.run(agent_manager.initialize(use_mcp=use_mcp, mcp_url=mcp_url))
                 
-                response = asyncio.run(agent_manager.handle_message(prompt))
+                manager = asyncio.run(WorkflowAgentFactory.create_manager(
+                    use_mcp=use_mcp,
+                    mcp_url=mcp_url,
+                    target_language=settings.default_language
+                ))
+                
+                initial_state = WorkflowState()
+                
+                result = asyncio.run(
+                    user_assistant_graph.run(
+                        start_node=StartNode(),
+                        state=initial_state,
+                        deps=manager.to_deps(
+                            message=prompt,
+                            language=settings.default_language
+                        )
+                    )
+                )
+                
+                response = result.output
         except AuthenticationError:
             st.warning("Please provide an api key in .env")
             response = ""

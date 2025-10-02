@@ -2,30 +2,40 @@ import asyncio
 import logging
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
-from app.api.deps import get_workflow_dependencies
-from app.agent.workflows.agent_workflow import user_assistant_graph, StartNode
+
+from app.agent.factories.workflow_factory import WorkflowAgentFactory
+from app.agent.workflows.agent_workflow import user_assistant_graph
+from app.agent.workflows.nodes import StartNode
 from app.agent.workflows.generation_events import WorkflowState
 from app.config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000, description="User message")
     use_mcp: bool = Field(default=settings.mcp_enabled, description="Enable MCP server integration")
+
 
 class ChatResponse(BaseModel):
     response: str
     error: str | None = None
 
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """Simple chat endpoint using the workflow"""
+    """Chat endpoint using workflow with AgentManager factory."""
     logger.info(f"Received chat request: {request.message[:50]}... (MCP: {request.use_mcp})")
     
     try:
         mcp_url = settings.mcp_url if request.use_mcp else None
-        deps = await get_workflow_dependencies(mcp_url=mcp_url)
+        
+        manager = await WorkflowAgentFactory.create_manager(
+            use_mcp=request.use_mcp,
+            mcp_url=mcp_url,
+            target_language=settings.default_language
+        )
         
         initial_state = WorkflowState()
         
@@ -33,7 +43,10 @@ async def chat(request: ChatRequest):
             user_assistant_graph.run(
                 start_node=StartNode(),
                 state=initial_state,
-                deps={**deps, 'message': request.message}
+                deps=manager.to_deps(
+                    message=request.message,
+                    language=settings.default_language
+                )
             ),
             timeout=settings.timeout
         )

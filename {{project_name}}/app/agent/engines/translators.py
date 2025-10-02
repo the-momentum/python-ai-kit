@@ -1,51 +1,63 @@
-from pydantic_ai import Agent, RunContext
-from pydantic_ai.result import RunResult
+from dataclasses import dataclass
+from pydantic_ai import RunContext
 
+from app.agent.engines.agent_base import BaseAgent, BaseAgentDeps
 from app.agent.prompts.worker_prompts import TEXT_TRANSLATOR_INSTRUCTIONS
-from app.schemas.language import Language
 
 
-class SimpleTranslatorWorker:
-    """Simple translator using Pydantic AI."""
+@dataclass
+class TranslatorDeps(BaseAgentDeps):
+    """Dependencies for translator with target language."""
+    target_language: str = "english"
+
+
+class SimpleTranslatorWorker(BaseAgent):
+    """Simple translator using Pydantic AI, supporting any language as string."""
     
     def __init__(
         self,
-        llm_vendor: str = "openai",
-        llm_model: str = "gpt-4o-mini",
-        timeout: int = 360,
-        language: Language = Language.EN,
+        target_language: str = "english",
         system_prompt: str | None = None,
-        verbose: bool = False,
-    ) -> None:
-        self.target_language = language
-        self.verbose = verbose
+        **kwargs
+    ):
+        self.target_language = target_language
         
         instructions = system_prompt or TEXT_TRANSLATOR_INSTRUCTIONS
-        model_string = f"{llm_vendor}:{llm_model}"
-        
-        self.agent = Agent(
-            model=model_string,
+        super().__init__(
+            deps_type=TranslatorDeps,
             instructions=instructions,
-            deps_type=Language,
+            **kwargs
         )
         
         @self.agent.instructions
-        def add_target_language(ctx: RunContext[Language]) -> str:
-            return f"Please translate the following text into {ctx.deps.value} language."
+        def add_target_language(ctx: RunContext[TranslatorDeps]) -> str:
+            return f"Please translate the following text into {ctx.deps.target_language} language."
 
-    def translate(
+    async def translate(
         self, 
         query: str, 
-        language: Language | None = None
+        language: str | None = None
     ) -> str:
+        """Translate text to any language.
+        
+        Args:
+            query: Text to translate
+            language: Target language (e.g. "polish", "angielski", "español", "中文")
+                     If None, uses target_language from constructor
+        
+        Returns:
+            Translated text
+        """
         target = language or self.target_language
         
         if self.verbose:
-            print(f"Translating to {target.value}: {query}")
+            print(f"Translating to {target}: {query}")
         
-        result = self.agent.run_sync(
-            message=query,
-            deps=target,
+        deps = TranslatorDeps(language=self.language, target_language=target)
+        
+        result = await self.agent.run(
+            user_prompt=query,
+            deps=deps,
         )
         
         if self.verbose:
