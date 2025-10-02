@@ -1,7 +1,7 @@
 from functools import lru_cache
 
 from dotenv import find_dotenv
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,10 +35,18 @@ class Settings(BaseSettings):
     api_key: str
     ai_provider: str = "openai"
     model: str = "gpt-4o"
-    mcp_url: str = "http://127.0.0.1:8000/mcp" # include "/mcp" endpoint
+    mcp_urls: list[str] = ["http://127.0.0.1:8000/mcp"]
     mcp_enabled: bool = True
     timeout: int = 360
     default_language: str = "english"
+
+    @field_validator('mcp_urls', mode='before')
+    @classmethod
+    def parse_mcp_urls(cls, v):
+        """Parse MCP URLs from environment variable (comma-separated string or list)."""
+        if isinstance(v, str):
+            return [url.strip() for url in v.split(',') if url.strip()]
+        return v
     {% endif %}
 
     {% if project_type in ["api-monolith", "api-microservice"] %}

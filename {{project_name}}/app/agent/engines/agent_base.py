@@ -32,13 +32,13 @@ class BaseAgent(ABC):
         deps_type: Type[BaseAgentDeps] = BaseAgentDeps,
         output_type: Any = None,
         instructions: str | None = None,
-        mcp_url: str | None = None,
+        mcp_urls: list[str] | None = None,
         **kwargs
     ) -> None:
         self.language = language
         self.verbose = verbose
         self.chat_history: list[ModelMessage] = []
-        self.mcp_url = mcp_url
+        self.mcp_urls = mcp_urls or []
         
         set_api_key_for_vendor(llm_vendor, api_key)
         
@@ -46,15 +46,22 @@ class BaseAgent(ABC):
         model_string = f"{llm_vendor}:{llm_model}"
         
         toolsets = []
-        if mcp_url:
-            try:
-                mcp_server = MCPServerStreamableHTTP(mcp_url)
-                toolsets.append(mcp_server)
-                if self.verbose:
-                    print(f"MCP server enabled: {mcp_url}")
-            except Exception as e:
-                if self.verbose:
-                    print(f"Failed to initialize MCP server: {e}")
+        if self.mcp_urls:
+            for mcp_url in self.mcp_urls:
+                try:
+                    if not mcp_url.startswith(('http://', 'https://')):
+                        if self.verbose:
+                            print(f"Invalid MCP URL format: {mcp_url}")
+                        continue
+                    
+                    mcp_server = MCPServerStreamableHTTP(mcp_url)
+                    toolsets.append(mcp_server)
+                    if self.verbose:
+                        print(f"MCP server enabled: {mcp_url}")
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Failed to initialize MCP server {mcp_url}: {e}")
+                    continue
         
         agent_kwargs = {
             'model': model_string,
