@@ -67,6 +67,7 @@ with st.sidebar:
     if use_mcp:
         url = st.text_input("MCP URL", "http://127.0.0.1:8000/mcp")
         settings.mcp_url = url
+        os.environ["MCP_URL"] = url
     
     st.divider()
     
