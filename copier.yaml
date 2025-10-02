@@ -87,3 +87,4 @@ _exclude:
 
 _tasks:
   - "mv {{project_name}}/README_{{project_type}}.md {{project_name}}/README.md"
+  - "cd {{project_name}} && uv sync "
