@@ -13,14 +13,14 @@ class WorkflowAgentFactory:
     async def create_manager(
         use_mcp: bool = False, 
         mcp_urls: list[str] | None = None,
-        target_language: str = "english"
+        language: str = "english"
     ) -> AgentManager:
         """Create AgentManager with all workflow agents including translator.
         
         Args:
             use_mcp: Whether to enable MCP servers
             mcp_urls: List of MCP server URLs (if None and use_mcp=True, uses settings.mcp_urls)
-            target_language: Default target language for translator
+            language: Language for all agents
             
         Returns:
             Configured AgentManager instance
@@ -36,17 +36,17 @@ class WorkflowAgentFactory:
         manager.register('agent', ReasoningAgent,
             verbose=settings.debug_mode,
             api_key=settings.api_key,
-            language=settings.default_language,
+            language=language,
             mcp_urls=final_mcp_urls)
         
         manager.register('guardrails', OutputReformatterWorker,
             verbose=settings.debug_mode,
             api_key=settings.api_key,
-            language=settings.default_language)
+            language=language)
         
         manager.register('translator', SimpleTranslatorWorker,
             verbose=settings.debug_mode,
-            target_language=target_language)
+            target_language=language)
         
         await manager.initialize()
         return manager
