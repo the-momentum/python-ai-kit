@@ -65,6 +65,7 @@ This framework solves these problems by integrating proven solutions into a cohe
 - [**API Architecture**](docs/api-architecture.md) - Learn about the database, repositories, services, and API design patterns
 - [**Agents**](docs/agents.md) - Instructions for running and working with AI agents
 - [**Develop your agent workflow**]({{project_name}}/README_agent.md) - patterns you might use to develop your own workflow
+- [**MCP Server**]({{project_name}}/README_mcp-server.md) - MCP Server template documentation
 
 ## 🎯 Project Types
 
