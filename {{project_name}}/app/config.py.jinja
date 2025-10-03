@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     max_input_tokens: int | None = None
     max_requests: int | None = None
 
+
     @field_validator('mcp_urls', mode='before')
     @classmethod
     def parse_mcp_urls(cls, v):
@@ -51,6 +52,11 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [url.strip() for url in v.split(',') if url.strip()]
         return v
+    {% endif %}
+
+    {%if project_type == "mcp-server" %}
+    # MCP SETTINGS
+    mcp_server_name: str = f"MCP Server"
     {% endif %}
 
     {% if project_type in ["api-monolith", "api-microservice"] %}

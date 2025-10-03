@@ -5,6 +5,8 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 {% elif project_type == "agent" %}
 from fastapi import FastAPI
+{% elif project_type == "mcp-server" %}
+from fastmcp import FastMCP
 {% endif %}
 
 from app.config import settings
@@ -17,11 +19,19 @@ from app.api import head_router
 from app.api import user_router_v1
 {% elif project_type == "agent" %}
 from app.api import chat_router_v1
+{% elif project_type == "mcp-server" %}
+from app.mcp import mcp_router
 {% endif %}
 
 basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(message)s")
 
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 api = FastAPI(title=settings.api_name)
+
+@api.get("/")
+async def root() -> dict[str, str]:
+    return {"message": "Server is running!"}
+{% endif %}
 
 {% if project_type in ["api-monolith", "api-microservice"] %}
 @api.exception_handler(RequestValidationError)
@@ -29,9 +39,9 @@ async def request_validation_exception_handler(_: Request, exc: RequestValidatio
     raise handle_exception(exc, err_msg=exc.args[0][0]["msg"])
 {% endif %}
 
-@api.get("/")
-async def root() -> dict[str, str]:
-    return {"message": "Server is running!"}
+{% if project_type == "mcp-server" %}
+mcp = FastMCP(name=settings.mcp_server_name)
+{% endif %}
 
 
 {% if project_type == "api-monolith" %}
@@ -40,4 +50,6 @@ api.include_router(head_router, prefix=settings.api_latest)
 api.include_router(user_router_v1, prefix=settings.api_latest)
 {% elif project_type == "agent" %}
 api.include_router(chat_router_v1, prefix=settings.api_latest)
+{% elif project_type == "mcp-server" %}
+mcp.mount(mcp_router)
 {% endif %}
