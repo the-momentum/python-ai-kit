@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
 
-from app.mcp.v1.tools import hello
+from app.mcp.tools import hello
 
 mcp_router = FastMCP(name="Main MCP")
 
