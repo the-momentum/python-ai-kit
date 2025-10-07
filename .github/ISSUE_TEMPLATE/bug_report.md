@@ -7,6 +7,9 @@ assignees: ''
 
 ---
 
+**In what type of project did the bug occur?**
+api-monolith/api-microserivce/mcp-server/agent
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
