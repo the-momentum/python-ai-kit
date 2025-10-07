@@ -31,8 +31,8 @@ PrimaryKey = Annotated[T, mapped_column(primary_key=True)]
 Unique = Annotated[T, mapped_column(unique=True)]
 UniqueIndex = Annotated[T, mapped_column(index=True, unique=True)]
 
-type datetime_tz = Annotated[datetime, "datetime-timezone-aware"]
-type email = Annotated[EmailStr, "email-validated"]
+datetime_tz = Annotated[datetime, DateTime(timezone=True)]
+email = Annotated[EmailStr, String]
 
 
 def _prepare_sessionmaker(engine: Engine) -> sessionmaker:
@@ -53,8 +53,7 @@ class BaseDbModel(DeclarativeBase):
 
     type_annotation_map = {
         str: String,
-        email: String,
-        datetime_tz: DateTime(timezone=True),
+        EmailStr: String,
     }
 
 
