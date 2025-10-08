@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:18
+    container_name: api-postgres
+    environment:
+      POSTGRES_DB: {{project_name}}
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    container_name: {{project_name}}-app
+    env_file:
+      - ./config/.env
+    environment:
+      - DB_HOST=db
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - ./app:/root_project/app
+      - type: bind
+        source: ./config/.env
+        target: /root_project/config/.env
+        bind:
+          create_host_path: false
+    restart: on-failure
+
+volumes:
+  postgres_data:
