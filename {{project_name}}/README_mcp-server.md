@@ -75,3 +75,7 @@ The server uses Pydantic settings for configuration. Key settings can be configu
 ## Integration
 
 This MCP server can be integrated with various AI assistants and language models that support the MCP protocol, providing them with access to your custom tools and data sources. **We suggest to use HTTP transport for AI agents integrations**.
+
+---
+
+This project was generated from the [Python AI Kit](https://github.com/the-momentum/python-ai-kit).
