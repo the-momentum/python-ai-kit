@@ -278,3 +278,7 @@ class MyComplexAgent(BaseAgent):
 ## 🚀 Examples
 
 Check the `examples/` directory for complete working examples.
+
+---
+
+This project was generated from the [Python AI Kit](https://github.com/the-momentum/python-ai-kit).
