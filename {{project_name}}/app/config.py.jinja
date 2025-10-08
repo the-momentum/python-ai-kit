@@ -1,13 +1,17 @@
 from functools import lru_cache
+from pathlib import Path
 
-from dotenv import find_dotenv
+{%if project_type =="agent" %}
 from pydantic import SecretStr, field_validator
+{%else%}
+from pydantic import SecretStr
+{%endif%}
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=find_dotenv(usecwd=True),
+        env_file=str(Path(__file__).parent.parent / "config" / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
         # default env_file solution search .env every time BaseSettings is instantiated

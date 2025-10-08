@@ -23,3 +23,6 @@ setup.cfg
 Makefile
 
 .*
+
+*.xml
+*.db
