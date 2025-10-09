@@ -51,3 +51,7 @@ uv run fastapi run app/main.py --reload
 ### Access the application
 - API: http://localhost:8000
 - Swagger: http://localhost:8000/docs
+
+---
+
+This project was generated from the [Python AI Kit](https://github.com/the-momentum/python-ai-kit).
