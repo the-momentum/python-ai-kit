@@ -36,8 +36,9 @@ python_versions:
   choices:
     - "3.12"
     - "3.13"
+    - "3.14"
   validator: |
-    {% set all_ver = ["3.12", "3.13"] %}
+    {% set all_ver = ["3.12", "3.13", "3.14"] %}
     {% if all_ver.index(python_versions[-1]) - all_ver.index(python_versions[0]) + 1 != python_versions|length %}
     python_versions must be a consecutive list of versions
     {% endif %}
@@ -58,6 +59,9 @@ _exclude:
   - /README.md
   - copier.yaml
   - .git
+
+  - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ '*/app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
   - "{{ '*/README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
