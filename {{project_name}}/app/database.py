@@ -1,15 +1,13 @@
 from collections.abc import Iterator
-from datetime import datetime
-from typing import Annotated, TypeVar
+from typing import Annotated
+from uuid import UUID
 
 from fastapi import Depends
-from pydantic import EmailStr
-from sqlalchemy import DateTime, Engine, String, create_engine, inspect
+from sqlalchemy import Engine, UUID as SqlUUID, Text, create_engine, inspect
 from sqlalchemy.orm import (
     DeclarativeBase,
     Session,
     declared_attr,
-    mapped_column,
     sessionmaker,
 )
 
@@ -23,16 +21,6 @@ engine = create_engine(
     pool_timeout=30,
     pool_recycle=3600,
 )
-
-T = TypeVar("T")
-
-Indexed = Annotated[T, mapped_column(index=True)]
-PrimaryKey = Annotated[T, mapped_column(primary_key=True)]
-Unique = Annotated[T, mapped_column(unique=True)]
-UniqueIndex = Annotated[T, mapped_column(index=True, unique=True)]
-
-datetime_tz = Annotated[datetime, DateTime(timezone=True)]
-email = Annotated[EmailStr, String]
 
 
 def _prepare_sessionmaker(engine: Engine) -> sessionmaker:
@@ -52,8 +40,8 @@ class BaseDbModel(DeclarativeBase):
         return f"<{self.__class__.__name__}(id={self.id_str})>"
 
     type_annotation_map = {
-        str: String,
-        EmailStr: String,
+        str: Text,
+        UUID: SqlUUID,
     }
 
 
