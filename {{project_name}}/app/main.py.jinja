@@ -13,12 +13,8 @@ from app.config import settings
 {% if project_type in ["api-monolith", "api-microservice"] %}
 from app.utils.exceptions import handle_exception
 {% endif %}
-{% if project_type == "api-monolith" %}
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 from app.api import head_router
-{% elif project_type == "api-microservice" %}
-from app.api import user_router_v1
-{% elif project_type == "agent" %}
-from app.api import chat_router_v1
 {% elif project_type == "mcp-server" %}
 from app.mcp import mcp_router
 {% endif %}
@@ -44,12 +40,8 @@ mcp = FastMCP(name=settings.mcp_server_name)
 {% endif %}
 
 
-{% if project_type == "api-monolith" %}
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 api.include_router(head_router, prefix=settings.api_latest)
-{% elif project_type == "api-microservice" %}
-api.include_router(user_router_v1, prefix=settings.api_latest)
-{% elif project_type == "agent" %}
-api.include_router(chat_router_v1, prefix=settings.api_latest)
 {% elif project_type == "mcp-server" %}
 mcp.mount(mcp_router)
 {% endif %}

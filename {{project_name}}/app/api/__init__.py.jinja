@@ -1,3 +1,5 @@
+from fastapi import APIRouter
+
 {% if project_type == "agent" %}
 from app.api.routes.v1.chat import router as chat_router_v1
 {% endif %}
@@ -5,13 +7,12 @@ from app.api.routes.v1.chat import router as chat_router_v1
 from app.api.routes.v1.user import router as user_router_v1
 {% endif %}
 
+head_router = APIRouter()
 
 {% if project_type == "agent" %}
-__all__ = [
-    "chat_router_v1",
-]
+head_router.include_router(chat_router_v1, prefix="/chat", tags=["chat"])
 {% elif project_type == "api-microservice" %}
-__all__ = [
-    "user_router_v1",
-]
+head_router.include_router(user_router_v1, prefix="/users", tags=["users"])
 {% endif %}
+
+__all__ = ["head_router"]
