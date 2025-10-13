@@ -12,6 +12,7 @@ from sqlalchemy.orm import (
 )
 
 from app.config import settings
+from app.utils.mappings_meta import AutoRelMeta
 
 engine = create_engine(
     settings.db_uri,
@@ -27,7 +28,7 @@ def _prepare_sessionmaker(engine: Engine) -> sessionmaker:
     return sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-class BaseDbModel(DeclarativeBase):
+class BaseDbModel(DeclarativeBase, metaclass=AutoRelMeta):    
     @declared_attr
     def __tablename__(self) -> str:
         return self.__name__.lower()
@@ -37,7 +38,12 @@ class BaseDbModel(DeclarativeBase):
         return f"{inspect(self).identity[0]}"
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}(id={self.id_str})>"
+        mapper = inspect(self.__class__)
+        fields = [
+            f"{col.key}={repr(getattr(self, col.key, None))}"
+            for col in mapper.columns
+        ]
+        return f"<{self.__class__.__name__}({', '.join(fields)})>"
 
     type_annotation_map = {
         str: Text,

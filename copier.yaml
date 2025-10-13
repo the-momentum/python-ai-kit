@@ -62,6 +62,7 @@ _exclude:
 
   - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ '*/app/utils/mappings_meta.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
   - "{{ '*/README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
