@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Type
 from pydantic_ai import Agent, RunContext, UsageLimits
 from pydantic_ai.messages import ModelMessage
-from pydantic_ai.result import AgentRunResult
+from pydantic_ai.run import AgentRunResult
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 
 from app.config import settings
