@@ -1,6 +1,6 @@
 _envops:
   trim_blocks: true
-  lstrip_blocks: true 
+  lstrip_blocks: true
 
 project_type:
   type: str
@@ -94,11 +94,10 @@ _exclude:
   - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
 
 _tasks:
-  - command: uv run python -c "import shutil; shutil.move('{{project_name}}/README_{{project_type}}.md', '{{project_name}}/README.md')"
+  - command: uvx python -c "import shutil; shutil.move('{{project_name}}/README_{{project_type}}.md', '{{project_name}}/README.md')"
     when: "{{ project_type in ['agent', 'mcp-server'] }}"
-  - command: uv run python -c "import shutil; shutil.move('{{project_name}}/README_api.md', '{{project_name}}/README.md')"
+  - command: uvx python -c "import shutil; shutil.move('{{project_name}}/README_api.md', '{{project_name}}/README.md')"
     when: "{{ project_type in ['api-monolith', 'api-microservice'] }}"
-  - command: uv run python -c "import os; os.makedirs('{{project_name}}/migrations/versions', exist_ok=True)"
+  - command: uvx python -c "import os; os.makedirs('{{project_name}}/migrations/versions', exist_ok=True)"
     when: "{{ project_type in ['api-monolith', 'api-microservice'] }}"
   - "cd {{project_name}} && uv sync"
-  
