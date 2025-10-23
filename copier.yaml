@@ -60,12 +60,13 @@ _exclude:
   - copier.yaml
   - .git
 
+  - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/utils/mappings_meta.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ '*/app/integrations/sqladmin' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
   - "{{ '*/README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
-  - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'Dockerfile' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'docker-compose.yml' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
 
@@ -99,5 +100,5 @@ _tasks:
   - command: uvx python -c "import shutil; shutil.move('{{project_name}}/README_api.md', '{{project_name}}/README.md')"
     when: "{{ project_type in ['api-monolith', 'api-microservice'] }}"
   - command: uvx python -c "import os; os.makedirs('{{project_name}}/migrations/versions', exist_ok=True)"
-    when: "{{ project_type in ['api-monolith', 'api-microservice'] }}"
+    when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
   - "cd {{project_name}} && uv sync"
