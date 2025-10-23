@@ -3,6 +3,7 @@ from logging import INFO, basicConfig
 {% if project_type in ["api-monolith", "api-microservice"] %}
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from sqladmin import Admin
 {% elif project_type == "agent" %}
 from fastapi import FastAPI
 {% elif project_type == "mcp-server" %}
@@ -12,6 +13,8 @@ from fastmcp import FastMCP
 from app.config import settings
 {% if project_type in ["api-monolith", "api-microservice"] %}
 from app.utils.exceptions import handle_exception
+from app.database import engine
+from app.integrations.sqladmin.views import add_admin_views
 {% endif %}
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 from app.api import head_router
@@ -23,6 +26,9 @@ basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(messa
 
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 api = FastAPI(title=settings.api_name)
+admin = Admin(app=api, engine=engine)
+add_admin_views(admin)
+
 
 @api.get("/")
 async def root() -> dict[str, str]:
