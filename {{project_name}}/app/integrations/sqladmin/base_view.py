@@ -5,8 +5,7 @@ from pydantic import BaseModel
 from sqladmin.models import ModelViewMeta
 
 from app.database import BaseDbModel
-
-_CONFIG_TYPE = dict[str, str | list[str] | None]
+from app.integrations.sqladmin.view_models import ColumnConfig, FormConfig, _get_model_fields
 
 class BaseAdminMeta(ModelViewMeta):
     def __new__(mcls, name: str, bases: tuple, attrs: dict, **kwargs: Any) -> ModelViewMeta:
@@ -14,17 +13,27 @@ class BaseAdminMeta(ModelViewMeta):
 
         if 'create_schema' in kwargs:
             cls._create_schema = kwargs['create_schema']
+            
         if 'update_schema' in kwargs:
             cls._update_schema = kwargs['update_schema']
+
+        if 'column' in kwargs:
+            ColumnConfig(**kwargs['column']).apply_to_class(cls)
+        else:
+            if hasattr(cls, 'model'):
+                cls.column_searchable_list = _get_model_fields(cls)
+                cls.column_sortable_list = _get_model_fields(cls)
 
         if auto_exclude_fields := mcls._get_fields_with_default_factory(cls):
             cls.form_excluded_columns = auto_exclude_fields
 
-        return cls
+        if 'form' in kwargs:
+            FormConfig(**kwargs['form']).apply_to_class(cls)
 
+        return cls
+    
     @staticmethod
     def _get_fields_with_default_factory(cls) -> list[str]:
-        """Get fields with default_factory from schemas."""
         exclude_fields = []
         
         for schema_attr in ['_create_schema', '_update_schema']:
@@ -41,17 +50,12 @@ class BaseAdminView(ModelView, metaclass=BaseAdminMeta):
     _update_schema: type[BaseModel]
     
     column_list: str | list[str] = "__all__"
-    column_exclude_list: list[str] = []
-    # column_searchable_list: list[str] = []
-    # column_sortable_list: list[str] = []
 
+    # by default metaclass excludes fields from schemas with default_factory
     form_excluded_columns: list[str] = []
-    # form_create_rules: list[str] = []
-    # form_edit_rules: list[str] = []
+    # fields with PrimaryKey in SQLAchemy model are always excluded
+    # add form_include_pk=True to your target class to override this behavior
 
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-    
     async def on_model_change(
         self, 
         data: dict[str, Any], 

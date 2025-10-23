@@ -7,15 +7,9 @@ class UserAdminView(
     BaseAdminView,
     model=User,
     create_schema=UserCreate,
-    update_schema=UserUpdate
-    # column={
-    #     "searchable": ["username", "email"],
-    #     "sortable": ["username", "email", "created_at", "updated_at"]
-    # },
-    # form={
-    #     "create_rules": ["username", "email"],
-    #     "edit_rules": ["username", "email"]
-    # }
+    update_schema=UserUpdate,
+    column={
+        "searchable": ["username", "email"]
+    }
 ):
     pass
-
