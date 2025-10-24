@@ -1,13 +1,10 @@
 from functools import lru_cache
 from pathlib import Path
 
-{%if project_type =="agent" %}
 from pydantic import AnyHttpUrl, SecretStr, field_validator
-{%else%}
-from pydantic import AnyHttpUrl, SecretStr
-{%endif%}
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.utils.config_utils import EnvironmentType
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -17,6 +14,10 @@ class Settings(BaseSettings):
         # default env_file solution search .env every time BaseSettings is instantiated
         # dotenv search .env when module is imported, without usecwd it starts from the file it was called
     )
+
+    # CORE SETTINGS
+    debug: bool = False
+    environment: EnvironmentType = EnvironmentType.LOCAL
 
     # API SETTINGS
     api_name: str = f"{{project_name}} API"
@@ -59,6 +60,18 @@ class Settings(BaseSettings):
             return [url.strip() for url in v.split(',') if url.strip()]
         return v
     {% endif %}
+
+    @field_validator("cors_origins", mode="after")
+    @classmethod
+    def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        if isinstance(v, (list, str)):
+            return v
+
+        # This should never be reached given the type annotation, but ensures type safety
+        raise ValueError(f"Unexpected type for cors_origins: {type(v)}")
+
 
     {%if project_type == "mcp-server" %}
     # MCP SETTINGS
