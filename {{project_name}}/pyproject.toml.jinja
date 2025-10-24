@@ -22,6 +22,8 @@ dependencies = [
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     "fastapi>=0.116.1",
     "fastapi-cli>=0.0.8",
+    {% endif %}
+    {% if "sqladmin" in plugins %}
     "sqladmin[full]>=0.21.0",
     {% endif %}
 ]

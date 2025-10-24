@@ -1,6 +1,11 @@
 from app.integrations.sqladmin.base_view import BaseAdminView
+{% if project_type == "api-monolith" %}
 from app.user.models import User
 from app.user.schemas import UserCreate, UserUpdate
+{% else %}
+from app.models.user import User
+from app.schemas.user import UserCreate, UserUpdate
+{% endif %}
 
 
 class UserAdminView(

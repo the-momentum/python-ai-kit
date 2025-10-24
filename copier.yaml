@@ -11,6 +11,24 @@ project_type:
     - "mcp-server"
     - "agent"
 
+plugins:
+  type: str
+  help: Which plugins would you like to enable?
+  multiselect: true
+  default: |
+    {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+    - "sqladmin"
+    {% else %}
+    []
+    {% endif %}
+  choices: |
+    {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+    SQLAdmin [interface for database management]: sqladmin
+    {% else %}
+    {}
+    {% endif %}
+  when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
+
 project_name:
   type: str
   help: What is your project name?
@@ -64,7 +82,6 @@ _exclude:
   - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/utils/mappings_meta.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
-  - "{{ '*/app/integrations/sqladmin' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
   - "{{ '*/README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'Dockerfile' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
@@ -75,13 +92,13 @@ _exclude:
   - "{{ '*/app/repositories.py' if project_type != 'api-monolith' else '' }}"
   - "{{ '*/app/services.py' if project_type != 'api-monolith' else '' }}"
 
-  - "{{ '*/app/models' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/schemas/user.py' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/services' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/repositories' if project_type != 'api-microservice' else '' }}"
   - "{{ '*/app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"
 
   - "{{ '*/app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
+  - "{{ '*/app/models' if project_type not in ['api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/schemas' if project_type not in ['api-microservice', 'agent'] else '' }}"
 
   - "{{ '*/examples' if project_type != 'agent' else '' }}"
@@ -93,6 +110,8 @@ _exclude:
 
   - "{{ '*/README_mcp-server.md' if project_type != 'mcp-server' else '' }}"
   - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
+
+  - "{{ '*/app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
 
 _tasks:
   - command: uvx python -c "import shutil; shutil.move('{{project_name}}/README_{{project_type}}.md', '{{project_name}}/README.md')"
