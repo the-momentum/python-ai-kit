@@ -18,15 +18,16 @@ plugins:
   default: |
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     - "sqladmin"
+    {% else %}
+    []
     {% endif %}
   choices: |
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
-    - "sqladmin"
+    SQLAdmin [interface for database management]: sqladmin
+    {% else %}
+    {}
     {% endif %}
-  choices_help: |
-    {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
-    sqladmin: "SQLAdmin - Web-based admin interface for SQLAlchemy models"
-    {% endif %}
+  when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
 
 project_name:
   type: str
