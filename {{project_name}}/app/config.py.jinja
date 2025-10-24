@@ -2,9 +2,9 @@ from functools import lru_cache
 from pathlib import Path
 
 {%if project_type =="agent" %}
-from pydantic import SecretStr, field_validator
+from pydantic import AnyHttpUrl, SecretStr, field_validator
 {%else%}
-from pydantic import SecretStr
+from pydantic import AnyHttpUrl, SecretStr
 {%endif%}
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     api_v1: str = "/api/v1"
     api_latest: str = api_v1
     paging_limit: int = 100
+    cors_origins: list[AnyHttpUrl] = []
+    cors_allow_all: bool = False
 
     {% if project_type in ["api-monolith", "api-microservice"] %}
     # DATABASE SETTINGS

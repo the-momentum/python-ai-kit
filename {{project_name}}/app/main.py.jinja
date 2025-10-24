@@ -25,6 +25,7 @@ from app.mcp import mcp_router
 from app.database import engine
 from app.integrations.sqladmin.views import add_admin_views
 {% endif %}
+from app.middlewares import add_cors_middleware
 
 basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(message)s")
 
@@ -35,6 +36,7 @@ admin = Admin(app=api, engine=engine)
 add_admin_views(admin)
 {% endif %}
 
+add_cors_middleware(api)
 
 @api.get("/")
 async def root() -> dict[str, str]:
