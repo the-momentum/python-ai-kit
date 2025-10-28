@@ -11,6 +11,6 @@ until worker_ready; do
   echo 'Celery workers not available...'
   sleep 1
 done
-echo 'Celery workers is available, proceeding...'
+echo 'Celery workers are available, proceeding...'
 
 uv run celery --app=app.main:celery_app --broker="$CELERY_BROKER_URL" flower
