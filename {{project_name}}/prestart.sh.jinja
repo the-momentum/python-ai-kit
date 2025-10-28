@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e -x
+
+{% if project_type in ["api-monolith", "api-microservice"] %}
+until uv run python -u scripts/healthchecks/db_up_check.py
+do
+  echo 'Waiting for db services to become available...'
+  sleep 1
+done
+echo 'DB containers UP, proceeding...'
+{% endif %}
+
+exec "$@"
