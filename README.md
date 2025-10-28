@@ -8,11 +8,17 @@ First, you need to have `copier` installed. We suggest to do it with `uv` (https
 ```bash
 uv tool install copier
 ```
+> [!TIP]
+> You can also just use `uvx` before `copier copy` command if you don't want to install this tool.
 
 To use this template, run:
 
 ```bash
 copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
+```
+or 
+```bash
+uvx copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
 ```
 > [!NOTE]
 > - In place of `$PARENT_DIRECTORY` put location where you want to have your project directory created.
