@@ -1,4 +1,5 @@
 # Python AI Kit
+[![Copier](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/copier-org/copier/master/img/badge/badge-grayscale-inverted-border-orange.json)](https://github.com/copier-org/copier)
 
 A production-ready framework for building AI agents that actually work in production.
 
@@ -8,16 +9,31 @@ First, you need to have `copier` installed. We suggest to do it with `uv` (https
 ```bash
 uv tool install copier
 ```
+> [!TIP]
+> You can also just use `uvx` before `copier copy` command if you don't want to install this tool.
 
 To use this template, run:
 
 ```bash
-copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
-# in place of `$PARENT_DIRECTORY` put location where you want to have your project directory created
-# copier copy ALWAYS creates new directory inside $PARENT_DIRECTORY
+copier copy https://github.com/the-momentum/python-ai-kit $TARGET_DIRECTORY --trust
+# uvx copier copy https://github.com/the-momentum/python-ai-kit $TARGET_DIRECTORY --trust
 ```
+Instead of `$TARGET_DIRECTORY` put directory name where you want to generate your project. You can use indirect path.
+> [!IMPORTANT]
+> - `copier copy` DOESN'T create new directory, it just copies files to $TARGET_DIRECTORY
+> - it will copy version from latest release
+> - if you want to fetch from latest unreleased commit, use flag `-r HEAD` (also accepts remote branches names)
 
-This will generate a new project based on the template with all the necessary files and structure.
+If you've already created project and templates get updated, you can still update your project:
+```bash
+copier update --trust --defaults
+# run this inside ypur project directory
+```
+> [!IMPORTANT]
+> - your project HAS to be a git repo in order to use this command
+> - omit `--defaults` flag, if you want to update answers (like `python_versions`)
+> - you can also use flag `-r` here to update with template version from unreleased versions
+
 
 ## Features
 

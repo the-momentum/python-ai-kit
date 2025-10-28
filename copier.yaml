@@ -2,6 +2,8 @@ _envops:
   trim_blocks: true
   lstrip_blocks: true
 
+_subdirectory: python-ai-kit
+
 project_type:
   type: str
   help: What type of project are you creating?
@@ -71,53 +73,46 @@ default_python_version:
     {% endfor %}
 
 _exclude:
-  - /.github
-  - /docs
-  - /LICENSE
-  - /README.md
-  - copier.yaml
-  - .git
-
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
-  - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
-  - "{{ '*/app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
-  - "{{ '*/app/utils/mappings_meta.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ 'app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ 'app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ 'app/utils/mappings_meta.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
-  - "{{ '*/README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
+  - "{{ 'README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'Dockerfile' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'docker-compose.yml' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
 
-  - "{{ '*/app/api.py' if project_type != 'api-monolith' else '' }}"
-  - "{{ '*/app/user' if project_type != 'api-monolith' else '' }}"
-  - "{{ '*/app/repositories.py' if project_type != 'api-monolith' else '' }}"
-  - "{{ '*/app/services.py' if project_type != 'api-monolith' else '' }}"
+  - "{{ 'app/api.py' if project_type != 'api-monolith' else '' }}"
+  - "{{ 'app/user' if project_type != 'api-monolith' else '' }}"
+  - "{{ 'app/repositories.py' if project_type != 'api-monolith' else '' }}"
+  - "{{ 'app/services.py' if project_type != 'api-monolith' else '' }}"
 
-  - "{{ '*/app/schemas/user.py' if project_type != 'api-microservice' else '' }}"
-  - "{{ '*/app/services' if project_type != 'api-microservice' else '' }}"
-  - "{{ '*/app/repositories' if project_type != 'api-microservice' else '' }}"
-  - "{{ '*/app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"
+  - "{{ 'app/schemas/user.py' if project_type != 'api-microservice' else '' }}"
+  - "{{ 'app/services' if project_type != 'api-microservice' else '' }}"
+  - "{{ 'app/repositories' if project_type != 'api-microservice' else '' }}"
+  - "{{ 'app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"
 
-  - "{{ '*/app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
-  - "{{ '*/app/models' if project_type not in ['api-microservice', 'agent'] else '' }}"
-  - "{{ '*/app/schemas' if project_type not in ['api-microservice', 'agent'] else '' }}"
+  - "{{ 'app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
+  - "{{ 'app/models' if project_type not in ['api-microservice', 'agent'] else '' }}"
+  - "{{ 'app/schemas' if project_type not in ['api-microservice', 'agent'] else '' }}"
 
-  - "{{ '*/examples' if project_type != 'agent' else '' }}"
-  - "{{ '*/README_agent.md' if project_type != 'agent' else '' }}"
-  - "{{ '*/app/agent' if project_type != 'agent' else '' }}"
-  - "{{ '*/app/gui.py' if project_type != 'agent' else '' }}"
-  - "{{ '*/app/utils/date_handlers.py' if project_type != 'agent' else '' }}"
-  - "{{ '*/app/utils/llm_vendor.py' if project_type != 'agent' else '' }}"
+  - "{{ 'examples' if project_type != 'agent' else '' }}"
+  - "{{ 'README_agent.md' if project_type != 'agent' else '' }}"
+  - "{{ 'app/agent' if project_type != 'agent' else '' }}"
+  - "{{ 'app/gui.py' if project_type != 'agent' else '' }}"
+  - "{{ 'app/utils/date_handlers.py' if project_type != 'agent' else '' }}"
+  - "{{ 'app/utils/llm_vendor.py' if project_type != 'agent' else '' }}"
 
-  - "{{ '*/README_mcp-server.md' if project_type != 'mcp-server' else '' }}"
-  - "{{ '*/app/mcp' if project_type != 'mcp-server' else '' }}"
+  - "{{ 'README_mcp-server.md' if project_type != 'mcp-server' else '' }}"
+  - "{{ 'app/mcp' if project_type != 'mcp-server' else '' }}"
 
-  - "{{ '*/app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
+  - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
 
 _tasks:
-  - command: uvx python -c "import shutil; shutil.move('{{project_name}}/README_{{project_type}}.md', '{{project_name}}/README.md')"
+  - command: uvx python -c "import shutil; shutil.move('README_{{project_type}}.md', 'README.md')"
     when: "{{ project_type in ['agent', 'mcp-server'] }}"
-  - command: uvx python -c "import shutil; shutil.move('{{project_name}}/README_api.md', '{{project_name}}/README.md')"
+  - command: uvx python -c "import shutil; shutil.move('README_api.md', 'README.md')"
     when: "{{ project_type in ['api-monolith', 'api-microservice'] }}"
-  - command: uvx python -c "import os; os.makedirs('{{project_name}}/migrations/versions', exist_ok=True)"
+  - command: uvx python -c "import os; os.makedirs('migrations/versions', exist_ok=True)"
     when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
-  - "cd {{project_name}} && uv sync"
+  - "uv sync"
