@@ -70,7 +70,7 @@ default_python_version:
     - "{{ver}}"
     {% endfor %}
 
-_subdirectory: {{ project_name }}
+_subdirectory: "{{ project_name }}""
 
 _exclude:
   - /.github
