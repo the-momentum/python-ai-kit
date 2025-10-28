@@ -73,12 +73,6 @@ default_python_version:
 _subdirectory: "{{ project_name }}""
 
 _exclude:
-  - /.github
-  - /docs
-  - /LICENSE
-  - /README.md
-  - copier.yaml
-  - .git
 
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
