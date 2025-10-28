@@ -31,6 +31,9 @@ dependencies = [
     "flower>=2.0.1",
     "redis>=7.0.1",
     {% endif %}
+    {% if "sentry" in plugins %}
+    "sentry-sdk[fastapi]>=2.42.1",
+    {% endif %}
 ]
 
 [dependency-groups]
