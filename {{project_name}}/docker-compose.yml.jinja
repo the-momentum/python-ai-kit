@@ -9,13 +9,14 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
 
   app:
     build:
         context: .
         dockerfile: Dockerfile
     container_name: {{project_name}}-app
+    command: scripts/start/app.sh
     env_file:
       - ./config/.env
     environment:
