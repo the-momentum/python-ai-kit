@@ -12,7 +12,9 @@ uv tool install copier
 To use this template, run:
 
 ```bash
-copier copy . <target_path_of_create_project> --trust
+copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
+# in place of `$PARENT_DIRECTORY` put location where you want to have your project directory created
+# copier copy ALWAYS creates new directory inside $PARENT_DIRECTORY
 ```
 
 This will generate a new project based on the template with all the necessary files and structure.
