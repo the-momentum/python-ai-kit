@@ -2,7 +2,7 @@ _envops:
   trim_blocks: true
   lstrip_blocks: true
 
-_subdirectory: {{project_name}}
+_subdirectory: "{{project_name}}"
 
 project_type:
   type: str
