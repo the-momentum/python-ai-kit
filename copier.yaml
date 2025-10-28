@@ -21,6 +21,7 @@ plugins:
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     - "sqladmin"
     - "celery"
+    - "sentry"
     {% else %}
     []
     {% endif %}
@@ -28,6 +29,7 @@ plugins:
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     SQLAdmin [interface for database management]: sqladmin
     Celery [task queue]: celery
+    Sentry [error tracking]: sentry
     {% else %}
     {}
     {% endif %}
@@ -110,6 +112,7 @@ _exclude:
 
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
+  - "{{ 'app/integrations/sentry.py' if 'sentry' not in plugins else '' }}"
   
 _tasks:
   - command: uvx python -c "import shutil; shutil.move('README_{{project_type}}.md', 'README.md')"

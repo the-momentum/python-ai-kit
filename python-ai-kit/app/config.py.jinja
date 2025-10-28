@@ -73,6 +73,14 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str
     {% endif %}
 
+    {% if "sentry" in plugins %}
+    # Sentry
+    SENTRY_ENABLED: bool = False
+    SENTRY_DSN: str | None = None
+    SENTRY_SAMPLES_RATE: float = 0.5
+    SENTRY_ENV: str | None = None
+    {% endif %}
+
     @field_validator("cors_origins", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:

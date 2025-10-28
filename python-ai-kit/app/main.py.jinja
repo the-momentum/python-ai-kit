@@ -23,10 +23,13 @@ from app.mcp import mcp_router
 {% endif %}
 {% if "sqladmin" in plugins %}
 from app.database import engine
-from app.integrations.sqladmin.views import add_admin_views
+from app.integrations.sqladmin import add_admin_views
 {% endif %}
 {% if "celery" in plugins %}
-from app.integrations.celery.core import create_celery
+from app.integrations.celery import create_celery
+{% endif %}
+{% if "sentry" in plugins %}
+from app.integrations.sentry import init_sentry
 {% endif %}
 from app.middlewares import add_cors_middleware
 
@@ -40,6 +43,9 @@ add_admin_views(admin)
 {% endif %}
 {% if "celery" in plugins %}
 celery_app = create_celery()
+{% endif %}
+{% if "sentry" in plugins %}
+init_sentry()
 {% endif %}
 
 add_cors_middleware(api)
