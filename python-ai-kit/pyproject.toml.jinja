@@ -26,6 +26,11 @@ dependencies = [
     {% if "sqladmin" in plugins %}
     "sqladmin[full]>=0.21.0",
     {% endif %}
+    {% if "celery" in plugins %}
+    "celery>=5.5.3",
+    "flower>=2.0.1",
+    "redis>=7.0.1",
+    {% endif %}
 ]
 
 [dependency-groups]

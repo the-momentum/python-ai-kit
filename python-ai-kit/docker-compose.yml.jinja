@@ -40,5 +40,52 @@ services:
           create_host_path: false
     restart: on-failure
 
+  celery-worker:
+    container_name: celery-worker
+    image: {{project_name}}-app:latest
+    command: scripts/start/worker.sh
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    env_file:
+      - config/.env
+    depends_on:
+      - redis
+      - postgres
+
+  celery-beat:
+    container_name: celery-beat
+    image: {{project_name}}-app:latest
+    command: scripts/start/beat.sh
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    env_file:
+      - config/.env
+    depends_on:
+      - redis
+      - postgres
+
+  flower:
+    container_name: flower
+    image: {{project_name}}-app:latest
+    command: scripts/start/flower.sh
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    env_file:
+      - config/.env
+    ports:
+      - 5555:5555
+    depends_on:
+      - redis
+      - postgres
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/var/lib/redis/data
+
 volumes:
   postgres_data:
+  redis_data:
