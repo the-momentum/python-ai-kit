@@ -15,16 +15,15 @@ To use this template, run:
 
 ```bash
 copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
+# uvx copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
 ```
-or 
-```bash
-uvx copier copy https://github.com/the-momentum/python-ai-kit $PARENT_DIRECTORY --trust
+or ```bash
 ```
 > [!NOTE]
 > - In place of `$PARENT_DIRECTORY` put location where you want to have your project directory created.
 > - copier copy ALWAYS creates new directory inside $PARENT_DIRECTORY
 
-This will generate a new project based on the template with all the necessary files and structure.
+This will generate a new project based on the template with all the necessary files and structure. If you want to update generated project
 
 ## Features
 

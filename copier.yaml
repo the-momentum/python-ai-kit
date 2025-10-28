@@ -2,6 +2,8 @@ _envops:
   trim_blocks: true
   lstrip_blocks: true
 
+_subdirectory: {{project_name}}
+
 project_type:
   type: str
   help: What type of project are you creating?
@@ -71,13 +73,6 @@ default_python_version:
     {% endfor %}
 
 _exclude:
-  - /.github
-  - /docs
-  - /LICENSE
-  - /README.md
-  - copier.yaml
-  - .git
-
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ '*/app/mappings.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
