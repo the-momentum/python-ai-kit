@@ -67,6 +67,12 @@ class Settings(BaseSettings):
         return v
     {% endif %}
 
+    {% if "celery" in plugins %}
+    # CELERY SETTINGS
+    CELERY_BROKER_URL: str
+    CELERY_RESULT_BACKEND: str
+    {% endif %}
+
     @field_validator("cors_origins", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:

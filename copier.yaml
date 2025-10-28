@@ -20,12 +20,14 @@ plugins:
   default: |
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     - "sqladmin"
+    - "celery"
     {% else %}
     []
     {% endif %}
   choices: |
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     SQLAdmin [interface for database management]: sqladmin
+    Celery [task queue]: celery
     {% else %}
     {}
     {% endif %}
@@ -107,7 +109,8 @@ _exclude:
   - "{{ 'app/mcp' if project_type != 'mcp-server' else '' }}"
 
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
-
+  - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
+  
 _tasks:
   - command: uvx python -c "import shutil; shutil.move('README_{{project_type}}.md', 'README.md')"
     when: "{{ project_type in ['agent', 'mcp-server'] }}"

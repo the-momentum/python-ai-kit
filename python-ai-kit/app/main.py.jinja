@@ -25,6 +25,9 @@ from app.mcp import mcp_router
 from app.database import engine
 from app.integrations.sqladmin.views import add_admin_views
 {% endif %}
+{% if "celery" in plugins %}
+from app.integrations.celery.core import create_celery
+{% endif %}
 from app.middlewares import add_cors_middleware
 
 basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(message)s")
@@ -34,6 +37,9 @@ api = FastAPI(title=settings.api_name)
 {% if "sqladmin" in plugins %}
 admin = Admin(app=api, engine=engine)
 add_admin_views(admin)
+{% endif %}
+{% if "celery" in plugins %}
+celery_app = create_celery()
 {% endif %}
 
 add_cors_middleware(api)
