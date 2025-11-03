@@ -38,8 +38,8 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 5432
     db_name: str = "{{project_name}}"
-    db_user: str = "user"
-    db_password: SecretStr = SecretStr("password")
+    db_user: str = "{{project_name}}"
+    db_password: SecretStr = SecretStr("{{project_name}}")
     {% endif %}
 
     {% if project_type == "agent" %}

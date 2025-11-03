@@ -1,8 +1,12 @@
-{% if project_type == "api-monolith" %}
+{% if project_type in ["api-monolith", "api-microservice"] %}
 import traceback
 
 try:
+    {% if project_type == "api-monolith" %}
     from app.user.models import User  # noqa: F401
+    {% elif project_type == "api-microservice" %}
+    from app.models import *  # noqa: F401
+    {% endif %}
 except ImportError:
     traceback.print_exc()
     raise
