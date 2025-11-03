@@ -52,7 +52,7 @@ services:
       - config/.env
     depends_on:
       - redis
-      - postgres
+      - db
 
   celery-beat:
     container_name: celery-beat__{{project_name}}
@@ -65,7 +65,7 @@ services:
       - config/.env
     depends_on:
       - redis
-      - postgres
+      - db
 
   flower:
     container_name: flower__{{project_name}}
@@ -80,7 +80,7 @@ services:
       - 5555:5555
     depends_on:
       - redis
-      - postgres
+      - db
 
   redis:
     container_name: redis__{{project_name}}
