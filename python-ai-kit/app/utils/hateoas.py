@@ -35,11 +35,21 @@ def _generate_collection_links(
     base_url: str,
 ) -> list[dict[str, str]]:
     links = [
-        {"rel": "self", "href": f"{base_url}?page={page}&limit={limit}", "method": "GET"},
-        {"rel": "next", "href": f"{base_url}?page={page + 1}&limit={limit}", "method": "GET"},
+        {
+            "rel": "self",
+            "href": f"{base_url}?page={page}&limit={limit}",
+            "method": "GET",
+        },
+        {
+            "rel": "next",
+            "href": f"{base_url}?page={page + 1}&limit={limit}",
+            "method": "GET",
+        },
     ]
     if page > 1:
-        links.append({"rel": "prev", "href": f"{base_url}?page={page - 1}&limit={limit}"})
+        links.append(
+            {"rel": "prev", "href": f"{base_url}?page={page - 1}&limit={limit}"}
+        )
     return links
 
 
@@ -63,7 +73,7 @@ def get_hateoas_list(
     page: int,
     limit: int,
     base_url: str,
-) -> dict[str, list[dict[str, str]]]:
+) -> dict[str, list[dict[str, str]] | list[dict[str, str | None]]]:
     name = items[0].__tablename__ if len(items) else ""
     built_url = _build_query(base_url, name)
     return {

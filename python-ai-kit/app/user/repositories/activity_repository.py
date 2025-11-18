@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.database import DbSession
-from app.models import User
+from app.user.models import User
 
 
 class ActivityRepository:
