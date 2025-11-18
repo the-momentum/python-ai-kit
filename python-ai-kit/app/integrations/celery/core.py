@@ -20,11 +20,11 @@ def create_celery() -> Celery:
         result_expires=3 * 24 * 3600,
     )
 
-    celery_app.autodiscover_tasks(["app.integrations.celery.tasks.dummy_task"])
+    celery_app.autodiscover_tasks(["app.integrations.celery"])
 
     celery_app.conf.beat_schedule = {
         "dummy-task": {
-            "task": "app.integrations.celery.tasks.dummy_task",
+            "task": "app.integrations.celery.tasks.dummy_task.dummy_task",
             "schedule": crontab(minute="*/1"),
         },
     }
