@@ -5,14 +5,15 @@ from uuid import UUID
 
 from pydantic import EmailStr
 from sqlalchemy import DateTime, ForeignKey, Numeric, String
-from sqlalchemy.orm import mapped_column, relationship
+from sqlalchemy.orm import mapped_column
 
 T = TypeVar("T")
 
 # Pre-defined indexes
 Indexed = Annotated[T, mapped_column(index=True)]
 PrimaryKey = Annotated[T, mapped_column(primary_key=True)]
-PKAutoIncrement = Annotated[T, mapped_column(primary_key=True, autoincrement=True)] # use for composite integer primary keys (single PK int will have it auto enabled)
+# use for composite integer primary keys (single PK int will have it auto enabled)
+PKAutoIncrement = Annotated[T, mapped_column(primary_key=True, autoincrement=True)]
 Unique = Annotated[T, mapped_column(unique=True)]
 UniqueIndex = Annotated[T, mapped_column(index=True, unique=True)]
 

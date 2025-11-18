@@ -12,18 +12,14 @@ from fastmcp import FastMCP
 from sqladmin import Admin
 {% endif %}
 
-from app.config import settings
-{% if project_type in ["api-monolith", "api-microservice"] %}
-from app.utils.exceptions import handle_exception
-{% endif %}
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 from app.api import head_router
 {% elif project_type == "mcp-server" %}
 from app.mcp import mcp_router
 {% endif %}
+from app.config import settings
 {% if "sqladmin" in plugins %}
 from app.database import engine
-from app.integrations.sqladmin import add_admin_views
 {% endif %}
 {% if "celery" in plugins %}
 from app.integrations.celery import create_celery
@@ -31,7 +27,13 @@ from app.integrations.celery import create_celery
 {% if "sentry" in plugins %}
 from app.integrations.sentry import init_sentry
 {% endif %}
+{% if "sqladmin" in plugins %}
+from app.integrations.sqladmin import add_admin_views
+{% endif %}
 from app.middlewares import add_cors_middleware
+{% if project_type in ["api-monolith", "api-microservice"] %}
+from app.utils.exceptions import handle_exception
+{% endif %}
 
 basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(message)s")
 
@@ -50,12 +52,14 @@ init_sentry()
 
 add_cors_middleware(api)
 
+
 @api.get("/")
 async def root() -> dict[str, str]:
     return {"message": "Server is running!"}
 {% endif %}
 
 {% if project_type in ["api-monolith", "api-microservice"] %}
+
 @api.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(_: Request, exc: RequestValidationError) -> None:
     raise handle_exception(exc, err_msg=exc.args[0][0]["msg"])
@@ -63,8 +67,8 @@ async def request_validation_exception_handler(_: Request, exc: RequestValidatio
 
 {% if project_type == "mcp-server" %}
 mcp = FastMCP(name=settings.mcp_server_name)
-{% endif %}
 
+{% endif %}
 
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 api.include_router(head_router, prefix=settings.api_latest)
