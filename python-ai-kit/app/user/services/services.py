@@ -14,13 +14,15 @@ class UserRepository(CrudRepository[User, UserCreate, UserUpdate]):
     pass
 
 
-class UserService(AppService[UserRepository, User, UserCreate, UserUpdate], ActivityMixin):
+class UserService(
+    AppService[UserRepository, User, UserCreate, UserUpdate], ActivityMixin
+):
     def __init__(
-        self, 
-        crud_model: type[UserRepository], 
-        model: type[User], 
-        log: Logger, 
-        **kwargs
+        self,
+        crud_model: type[UserRepository],
+        model: type[User],
+        log: Logger,
+        **kwargs,
     ) -> None:
         super().__init__(crud_model, model, log, **kwargs)
 

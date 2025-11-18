@@ -1,7 +1,7 @@
 import os
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Generator, Protocol
+from typing import Any, Callable, Generator
 
 from cryptography.fernet import Fernet
 from pydantic import ValidationInfo
@@ -16,13 +16,12 @@ class EnvironmentType(str, Enum):
     PRODUCTION = "production"
 
 
-class Decryptor(Protocol):
-    def decrypt(self, value: bytes) -> bytes: ...
-
-
 class FakeFernet:
     def decrypt(self, value: bytes) -> bytes:
         return value
+
+
+Decryptor = Fernet | FakeFernet
 
 
 class EncryptedField(str):
