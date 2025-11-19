@@ -15,7 +15,8 @@ class UserRepository(CrudRepository[User, UserCreate, UserUpdate]):
 
 
 class UserService(
-    AppService[UserRepository, User, UserCreate, UserUpdate], ActivityMixin
+    AppService[UserRepository, User, UserCreate, UserUpdate],
+    ActivityMixin,
 ):
     def __init__(
         self,

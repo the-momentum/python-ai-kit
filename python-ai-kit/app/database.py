@@ -40,9 +40,7 @@ class BaseDbModel(DeclarativeBase, metaclass=AutoRelMeta):
 
     def __repr__(self) -> str:
         mapper = inspect(self.__class__)
-        fields = [
-            f"{col.key}={repr(getattr(self, col.key, None))}" for col in mapper.columns
-        ]
+        fields = [f"{col.key}={repr(getattr(self, col.key, None))}" for col in mapper.columns]
         return f"<{self.__class__.__name__}({', '.join(fields)})>"
 
     type_annotation_map = {

@@ -18,8 +18,9 @@ class ActivityMixin:
 
     @handle_exceptions
     def is_user_active(
-        self: "UserService", db_session: DbSession, object_id: UUID
+        self: "UserService",
+        db_session: DbSession,
+        object_id: UUID,
     ) -> bool:
-
         self.logger.info(f"Checking if user with ID: {object_id} is active.")
         return self.activity_repository.is_user_active(db_session, object_id)

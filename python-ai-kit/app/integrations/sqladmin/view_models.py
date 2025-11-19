@@ -30,12 +30,8 @@ class ColumnConfig(BaseConfig):
         configs = {
             "column_list": self._all_or_value(self.include) or [],
             "column_exclude_list": self.exclude if self.exclude else [],
-            "column_searchable_list": (
-                self.searchable if self.searchable else _get_model_fields(cls)
-            ),
-            "column_sortable_list": (
-                self.sortable if self.sortable else _get_model_fields(cls)
-            ),
+            "column_searchable_list": (self.searchable if self.searchable else _get_model_fields(cls)),
+            "column_sortable_list": (self.sortable if self.sortable else _get_model_fields(cls)),
         }
 
         for attr, value in configs.items():

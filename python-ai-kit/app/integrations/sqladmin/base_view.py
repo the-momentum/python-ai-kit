@@ -1,9 +1,7 @@
 from typing import Any
 
 from fastapi import Request
-from sqladmin import ModelView
 from pydantic import BaseModel
-from sqladmin.models import ModelViewMeta
 
 from app.database import BaseDbModel
 from app.integrations.sqladmin.view_models import (
@@ -11,11 +9,17 @@ from app.integrations.sqladmin.view_models import (
     FormConfig,
     _get_model_fields,
 )
+from sqladmin import ModelView
+from sqladmin.models import ModelViewMeta
 
 
 class BaseAdminMeta(ModelViewMeta):
     def __new__(
-        mcls, name: str, bases: tuple, attrs: dict, **kwargs: Any
+        mcls,
+        name: str,
+        bases: tuple,
+        attrs: dict,
+        **kwargs: Any,
     ) -> ModelViewMeta:
         cls = super().__new__(mcls, name, bases, attrs, **kwargs)
 

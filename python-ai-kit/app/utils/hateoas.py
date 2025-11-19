@@ -48,7 +48,7 @@ def _generate_collection_links(
     ]
     if page > 1:
         links.append(
-            {"rel": "prev", "href": f"{base_url}?page={page - 1}&limit={limit}"}
+            {"rel": "prev", "href": f"{base_url}?page={page - 1}&limit={limit}"},
         )
     return links
 

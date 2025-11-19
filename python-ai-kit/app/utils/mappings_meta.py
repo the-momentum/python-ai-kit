@@ -22,7 +22,11 @@ class AutoRelMeta(DeclarativeAttributeIntercept):
     _registry: dict[str, dict[str, tuple[str, str]]] = {}
 
     def __new__(
-        mcls, name: str, bases: tuple[type, ...], namespace: dict[str, Any], **kw
+        mcls,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kw,
     ):
 
         annotations = dict(namespace.get("__annotations__", {}))
@@ -68,18 +72,18 @@ class AutoRelMeta(DeclarativeAttributeIntercept):
 
     @classmethod
     def _add_relation(
-        cls, attr: str, inner: Any, namespace: dict, local_rels: dict
+        cls,
+        attr: str,
+        inner: Any,
+        namespace: dict,
+        local_rels: dict,
     ) -> None:
         """Add relationship from inner type using registered RELATION_TYPES."""
         inner_origin = get_origin(inner)
         inner_args = get_args(inner)
 
         target_type = inner_args[0]
-        opts = (
-            inner_args[1]
-            if len(inner_args) > 1 and isinstance(inner_args[1], dict)
-            else {}
-        )
+        opts = inner_args[1] if len(inner_args) > 1 and isinstance(inner_args[1], dict) else {}
         target_name = cls._extract_target_name(target_type)
         if not target_name:
             return
