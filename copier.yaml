@@ -121,4 +121,9 @@ _tasks:
     when: "{{ project_type in ['api-monolith', 'api-microservice'] }}"
   - command: uvx python -c "import os; os.makedirs('migrations/versions', exist_ok=True)"
     when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
-  - "uv sync"
+  - "uv sync && uv sync --group code-quality"
+  - "git init && git branch -M master && git checkout -b master && git add --all"
+  - command: uvx python -c "import subprocess; result = subprocess.run(['uv', 'run', 'pre-commit', 'run', '--all-files']); exit(0)"
+  - "git add --all"
+  - command: uvx python -c "import subprocess; subprocess.run(['git', 'commit', '-m', 'Initial commit'])"
+
