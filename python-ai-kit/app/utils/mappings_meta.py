@@ -28,7 +28,6 @@ class AutoRelMeta(DeclarativeAttributeIntercept):
         namespace: dict[str, Any],
         **kw,
     ):
-
         annotations = dict(namespace.get("__annotations__", {}))
         local_rels = {}
 

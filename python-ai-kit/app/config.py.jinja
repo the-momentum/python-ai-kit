@@ -99,8 +99,8 @@ class Settings(BaseSettings):
             return v.get_decrypted_value(validation_info.data["fernet_decryptor"])
         return v
 
-
     {%if project_type == "mcp-server" %}
+    
     # MCP SETTINGS
     mcp_server_name: str = f"MCP Server"
 
