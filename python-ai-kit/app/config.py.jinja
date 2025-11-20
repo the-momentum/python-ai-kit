@@ -22,18 +22,18 @@ class Settings(BaseSettings):
     )
 
     # CORE SETTINGS
-    fernet_decryptor: FernetDecryptorField = Field("MASTER_KEY")
+    fernet_decryptor: FernetDecryptorField = Field(FernetDecryptorField("MASTER_KEY"))
     environment: EnvironmentType = EnvironmentType.LOCAL
 
     # API SETTINGS
-    api_name: str = f"{{project_name}} API"
+    api_name: str = "{{project_name}} API"
     api_v1: str = "/api/v1"
     api_latest: str = api_v1
     paging_limit: int = 100
     cors_origins: list[AnyHttpUrl] = []
     cors_allow_all: bool = False
-
     {% if project_type in ["api-monolith", "api-microservice"] %}
+
     # DATABASE SETTINGS
     db_host: str = "localhost"
     db_port: int = 5432
@@ -41,8 +41,8 @@ class Settings(BaseSettings):
     db_user: str = "{{project_name}}"
     db_password: SecretStr = SecretStr("{{project_name}}")
     {% endif %}
-
     {% if project_type == "agent" %}
+
     # AGENT SETTINGS
     debug_mode: bool = False
     api_key: str
@@ -66,14 +66,14 @@ class Settings(BaseSettings):
             return [url.strip() for url in v.split(',') if url.strip()]
         return v
     {% endif %}
-
     {% if "celery" in plugins %}
+
     # CELERY SETTINGS
     CELERY_BROKER_URL: str
     CELERY_RESULT_BACKEND: str
     {% endif %}
-
     {% if "sentry" in plugins %}
+
     # Sentry
     SENTRY_ENABLED: bool = False
     SENTRY_DSN: str | None = None
@@ -99,12 +99,12 @@ class Settings(BaseSettings):
             return v.get_decrypted_value(validation_info.data["fernet_decryptor"])
         return v
 
-
     {%if project_type == "mcp-server" %}
+    
     # MCP SETTINGS
     mcp_server_name: str = f"MCP Server"
-    {% endif %}
 
+    {% endif %}
     {% if project_type in ["api-monolith", "api-microservice"] %}
     @property
     def db_uri(self) -> str:
@@ -113,8 +113,8 @@ class Settings(BaseSettings):
             f"{self.db_user}:{self.db_password.get_secret_value()}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
-    {% endif %}
 
+    {% endif %}
     # 0. pytest ini_options
     # 1. environment variables
     # 2. .env

@@ -12,8 +12,9 @@ repos:
     hooks:
       - id: ty
         name: ty check
-        entry: .venv/bin/ty check .
+        entry: uv run ty check .
         language: system
+        pass_filenames: false
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

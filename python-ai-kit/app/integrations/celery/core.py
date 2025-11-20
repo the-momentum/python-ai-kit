@@ -1,8 +1,7 @@
+from app.config import settings
 from celery import Celery
 from celery import current_app as current_celery_app
 from celery.schedules import crontab
-
-from app.config import settings
 
 
 def create_celery() -> Celery:
@@ -20,11 +19,11 @@ def create_celery() -> Celery:
         result_expires=3 * 24 * 3600,
     )
 
-    celery_app.autodiscover_tasks(["app.integrations.celery.tasks.dummy_task"])
+    celery_app.autodiscover_tasks(["app.integrations.celery"])
 
     celery_app.conf.beat_schedule = {
         "dummy-task": {
-            "task": "app.integrations.celery.tasks.dummy_task",
+            "task": "app.integrations.celery.tasks.dummy_task.dummy_task",
             "schedule": crontab(minute="*/1"),
         },
     }

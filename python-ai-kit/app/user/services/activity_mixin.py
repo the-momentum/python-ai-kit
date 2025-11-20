@@ -3,11 +3,13 @@ from uuid import UUID
 
 from fastapi import Depends
 
+from app.database import DbSession
 from app.user.repositories import ActivityRepository
 from app.utils.exceptions import handle_exceptions
 
 if TYPE_CHECKING:
     from app.user.services import UserService
+
 
 class ActivityMixin:
     def __init__(self, activity_repository: ActivityRepository = Depends(), **kwargs):
@@ -15,6 +17,10 @@ class ActivityMixin:
         super().__init__(**kwargs)
 
     @handle_exceptions
-    def is_user_active(self: "UserService", object_id: UUID) -> bool:
+    def is_user_active(
+        self: "UserService",
+        db_session: DbSession,
+        object_id: UUID,
+    ) -> bool:
         self.logger.info(f"Checking if user with ID: {object_id} is active.")
-        return self.activity_repository.is_user_active(object_id)
+        return self.activity_repository.is_user_active(db_session, object_id)
