@@ -1,7 +1,8 @@
 import os
+from collections.abc import Callable, Generator
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Generator
+from typing import Any
 
 from cryptography.fernet import Fernet
 from pydantic import ValidationInfo

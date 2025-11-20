@@ -1,16 +1,16 @@
-from typing import Any, Dict, get_args, get_origin
+from typing import Any, get_args, get_origin
 
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.orm.decl_api import DeclarativeAttributeIntercept
 
 from app.mappings import ManyToOne, OneToMany
 
-DEFAULT_ONE_TO_MANY: Dict[str, Any] = {
+DEFAULT_ONE_TO_MANY: dict[str, Any] = {
     "cascade": "all, delete-orphan",
     "passive_deletes": True,
 }
-DEFAULT_MANY_TO_ONE: Dict[str, Any] = {}
-RELATION_TYPES: Dict[object, Dict[str, Any]] = {
+DEFAULT_MANY_TO_ONE: dict[str, Any] = {}
+RELATION_TYPES: dict[object, dict[str, Any]] = {
     ManyToOne: DEFAULT_MANY_TO_ONE,
     OneToMany: DEFAULT_ONE_TO_MANY,
 }

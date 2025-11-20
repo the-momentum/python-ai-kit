@@ -12,8 +12,10 @@ T = TypeVar("T")
 # Pre-defined indexes
 Indexed = Annotated[T, mapped_column(index=True)]
 PrimaryKey = Annotated[T, mapped_column(primary_key=True)]
+
 # use for composite integer primary keys (single PK int will have it auto enabled)
 PKAutoIncrement = Annotated[T, mapped_column(primary_key=True, autoincrement=True)]
+
 Unique = Annotated[T, mapped_column(unique=True)]
 UniqueIndex = Annotated[T, mapped_column(index=True, unique=True)]
 
