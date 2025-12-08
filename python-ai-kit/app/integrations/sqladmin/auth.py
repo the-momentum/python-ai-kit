@@ -2,6 +2,7 @@ from functools import lru_cache
 
 from app.config import settings
 from fastapi import Request
+from pydantic import SecretStr
 
 from sqladmin.authentication import AuthenticationBackend
 
@@ -12,13 +13,10 @@ class AdminAuth(AuthenticationBackend):
         username, password = form["username"], form["password"]
 
         # Validate username/password credentials
-        if (
-            username == settings.SQLADMIN_USER
-            and password == settings.SQLADMIN_PASSWORD
-        ):
-            request.session.update({"token": settings.SQLADMIN_TOKEN})
-
+        if username == settings.SQLADMIN_USER and password == self.VALID_PASSWORD:
+            request.session.update({"token": self.TOKEN})
             return True
+
         return False
 
     async def logout(self, request: Request) -> bool:
@@ -27,12 +25,29 @@ class AdminAuth(AuthenticationBackend):
 
     async def authenticate(self, request: Request) -> bool:
         token = request.session.get("token")
-        return token == settings.SQLADMIN_TOKEN
+        return token == self.TOKEN
+
+    @property
+    def VALID_PASSWORD(self):
+        if isinstance(settings.SQLADMIN_PASSWORD, SecretStr):
+            return settings.SQLADMIN_PASSWORD.get_secret_value()
+        return settings.SQLADMIN_PASSWORD
+
+    @property
+    def TOKEN(self):
+        if isinstance(settings.SQLADMIN_TOKEN, SecretStr):
+            return settings.SQLADMIN_TOKEN.get_secret_value()
+        return settings.SQLADMIN_TOKEN
 
 
 @lru_cache()
 def _get_sqladmin_auth_backend() -> AdminAuth:
-    return AdminAuth(secret_key=settings.SQLADMIN_SECRET_KEY)
+    if isinstance(settings.SQLADMIN_TOKEN, SecretStr):
+        secret = settings.SQLADMIN_SECRET_KEY.get_secret_value()
+    else:
+        secret = settings.SQLADMIN_SECRET_KEY
+
+    return AdminAuth(secret_key=secret)
 
 
 admin_authentication_backend = _get_sqladmin_auth_backend()

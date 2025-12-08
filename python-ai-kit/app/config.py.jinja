@@ -85,9 +85,9 @@ class Settings(BaseSettings):
 
     # SQLAdmin SETTINGS 
     SQLADMIN_USER: str = "admin"
-    SQLADMIN_PASSWORD: EncryptedField
-    SQLADMIN_SECRET_KEY: EncryptedField
-    SQLADMIN_SECRET_TOKEN: EncryptedField
+    SQLADMIN_PASSWORD: SecretStr = SecretStr("password")
+    SQLADMIN_SECRET_KEY: SecretStr = SecretStr("sqladmin_secret")
+    SQLADMIN_TOKEN: SecretStr = SecretStr("sqladmin_token")
 
     {% endif %}
 
