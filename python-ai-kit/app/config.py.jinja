@@ -81,6 +81,16 @@ class Settings(BaseSettings):
     SENTRY_ENV: str | None = None
     {% endif %}
 
+    {% if "sqladmin" in plugins %}
+
+    # SQLAdmin SETTINGS 
+    SQLADMIN_USER: str = "admin"
+    SQLADMIN_PASSWORD: EncryptedField
+    SQLADMIN_SECRET_KEY: EncryptedField
+    SQLADMIN_SECRET_TOKEN: EncryptedField
+
+    {% endif %}
+
     @field_validator("cors_origins", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
