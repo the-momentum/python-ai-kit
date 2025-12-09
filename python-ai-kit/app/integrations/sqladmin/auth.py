@@ -1,3 +1,6 @@
+import hashlib
+import hmac
+from datetime import datetime
 from functools import lru_cache
 
 from app.config import settings
@@ -8,13 +11,19 @@ from sqladmin.authentication import AuthenticationBackend
 
 
 class AdminAuth(AuthenticationBackend):
+    def __init__(self, secret_key: str):
+        super().__init__(secret_key)
+        self._secret_key = (
+            secret_key.encode() if isinstance(secret_key, str) else secret_key
+        )
+
     async def login(self, request: Request) -> bool:
         form = await request.form()
         username, password = form["username"], form["password"]
 
-        # Validate username/password credentials
-        if username == settings.SQLADMIN_USER and password == self.VALID_PASSWORD:
-            request.session.update({"token": self.TOKEN})
+        if self._credentials_valid(str(username), str(password)):
+            current_token = self._get_current_token()
+            request.session.update({"token": current_token})
             return True
 
         return False
@@ -23,11 +32,37 @@ class AdminAuth(AuthenticationBackend):
         request.session.clear()
         return True
 
-    async def authenticate(
-        self, request: Request
-    ) -> bool:  # validates each incoming request
+    async def authenticate(self, request: Request) -> bool:
         token = request.session.get("token")
-        return token == self.TOKEN
+        if not token:
+            return False
+        current_token = self._get_current_token()
+
+        if hmac.compare_digest(token, current_token):
+            return True
+
+        return False
+
+    def _credentials_valid(self, username: str, password: str) -> bool:
+        return username == settings.SQLADMIN_USER and password == self.VALID_PASSWORD
+
+    def _get_current_token(self) -> str:
+        current_time = datetime.utcnow()
+        time_slot = self._get_time_slot(current_time)
+        return self._generate_token(time_slot)
+
+    def _generate_token(self, time_slot: str) -> str:
+        return hmac.new(
+            self._secret_key, time_slot.encode(), hashlib.sha256
+        ).hexdigest()
+
+    def _get_time_slot(self, dt: datetime) -> str:
+        if self.TOKEN_TTL <= 0:
+            return dt.isoformat()
+
+        timestamp = int(dt.timestamp())
+        slot_number = timestamp // self.TOKEN_TTL
+        return str(slot_number)
 
     @property
     def VALID_PASSWORD(self):
@@ -36,10 +71,8 @@ class AdminAuth(AuthenticationBackend):
         return settings.SQLADMIN_PASSWORD
 
     @property
-    def TOKEN(self):
-        if isinstance(settings.SQLADMIN_TOKEN, SecretStr):
-            return settings.SQLADMIN_TOKEN.get_secret_value()
-        return settings.SQLADMIN_TOKEN
+    def TOKEN_TTL(self) -> int:
+        return getattr(settings, "SQLADMIN_TOKEN_TTL", 10)
 
 
 @lru_cache()
