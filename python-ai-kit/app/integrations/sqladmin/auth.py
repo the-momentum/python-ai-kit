@@ -1,6 +1,6 @@
 import hashlib
 import hmac
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 
 from app.config import settings
@@ -36,18 +36,16 @@ class AdminAuth(AuthenticationBackend):
         token = request.session.get("token")
         if not token:
             return False
+
         current_token = self._get_current_token()
 
-        if hmac.compare_digest(token, current_token):
-            return True
-
-        return False
+        return hmac.compare_digest(token, current_token)
 
     def _credentials_valid(self, username: str, password: str) -> bool:
         return username == settings.SQLADMIN_USER and password == self.VALID_PASSWORD
 
     def _get_current_token(self) -> str:
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         time_slot = self._get_time_slot(current_time)
         return self._generate_token(time_slot)
 
@@ -65,14 +63,17 @@ class AdminAuth(AuthenticationBackend):
         return str(slot_number)
 
     @property
-    def VALID_PASSWORD(self):
+    def VALID_PASSWORD(self) -> str:  # noqa: N802
         if isinstance(settings.SQLADMIN_PASSWORD, SecretStr):
             return settings.SQLADMIN_PASSWORD.get_secret_value()
         return settings.SQLADMIN_PASSWORD
 
     @property
-    def TOKEN_TTL(self) -> int:
-        return getattr(settings, "SQLADMIN_TOKEN_TTL", 10)
+    def TOKEN_TTL(self) -> int:  # noqa: N802
+        ttl = getattr(settings, "SQLADMIN_TOKEN_TTL", 3600)
+        if ttl < 0:
+            ttl = 3600
+        return ttl
 
 
 @lru_cache()
