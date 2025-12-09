@@ -23,7 +23,9 @@ class AdminAuth(AuthenticationBackend):
         request.session.clear()
         return True
 
-    async def authenticate(self, request: Request) -> bool:
+    async def authenticate(
+        self, request: Request
+    ) -> bool:  # validates each incoming request
         token = request.session.get("token")
         return token == self.TOKEN
 
@@ -42,7 +44,7 @@ class AdminAuth(AuthenticationBackend):
 
 @lru_cache()
 def _get_sqladmin_auth_backend() -> AdminAuth:
-    if isinstance(settings.SQLADMIN_TOKEN, SecretStr):
+    if isinstance(settings.SQLADMIN_SECRET_KEY, SecretStr):
         secret = settings.SQLADMIN_SECRET_KEY.get_secret_value()
     else:
         secret = settings.SQLADMIN_SECRET_KEY
