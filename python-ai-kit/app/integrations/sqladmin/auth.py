@@ -21,7 +21,7 @@ class AdminAuth(AuthenticationBackend):
         form = await request.form()
         username, password = form["username"], form["password"]
 
-        if self._credentials_valid(str(username), str(password)):
+        if self._validate_credentials(str(username), str(password)):
             current_token = self._get_current_token()
             request.session.update({"token": current_token})
             return True
@@ -41,7 +41,7 @@ class AdminAuth(AuthenticationBackend):
 
         return hmac.compare_digest(token, current_token)
 
-    def _credentials_valid(self, username: str, password: str) -> bool:
+    def _validate_credentials(self, username: str, password: str) -> bool:
         return username == settings.SQLADMIN_USER and password == self.VALID_PASSWORD
 
     def _get_current_token(self) -> str:
