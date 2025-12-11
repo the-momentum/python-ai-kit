@@ -29,6 +29,7 @@ from app.integrations.sentry import init_sentry
 {% endif %}
 {% if "sqladmin" in plugins %}
 from app.integrations.sqladmin import add_admin_views
+from app.integrations.sqladmin import admin_authentication_backend 
 {% endif %}
 from app.middlewares import add_cors_middleware
 {% if project_type in ["api-monolith", "api-microservice"] %}
@@ -40,7 +41,7 @@ basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(messa
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 api = FastAPI(title=settings.api_name)
 {% if "sqladmin" in plugins %}
-admin = Admin(app=api, engine=engine)
+admin = Admin(app=api, engine=engine, authentication_backend=admin_authentication_backend)
 add_admin_views(admin)
 {% endif %}
 {% if "celery" in plugins %}

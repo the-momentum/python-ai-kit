@@ -80,6 +80,14 @@ class Settings(BaseSettings):
     SENTRY_SAMPLES_RATE: float = 0.5
     SENTRY_ENV: str | None = None
     {% endif %}
+    {% if "sqladmin" in plugins %}
+
+    # SQLAdmin SETTINGS 
+    SQLADMIN_USER: str = "admin"
+    SQLADMIN_PASSWORD: SecretStr = SecretStr("password")
+    SQLADMIN_SECRET_KEY: SecretStr = SecretStr("sqladmin_secret")
+    SQLADMIN_TOKEN_TTL: int = 3600
+    {% endif %}
 
     @field_validator("cors_origins", mode="after")
     @classmethod
