@@ -3,13 +3,13 @@ import hmac
 from datetime import datetime, timezone
 from functools import lru_cache
 
+
 from fastapi import Request
 from pydantic import SecretStr
 
 from sqladmin.authentication import AuthenticationBackend
 
 from app.config import settings
-
 
 class AdminAuth(AuthenticationBackend):
     def __init__(self, secret_key: str):
@@ -72,7 +72,7 @@ class AdminAuth(AuthenticationBackend):
     def _are_admin_credentials_valid(self, username: str, password: str) -> bool:
         is_valid_username: bool = hmac.compare_digest(
             username,
-            settings.SQLADMIN_USERNAME,
+            settings.SQLADMIN_USER,
         )
         is_valid_password: bool = hmac.compare_digest(
             password,
