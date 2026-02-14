@@ -25,7 +25,7 @@ down:	## Kills running instance
 
 test:	## Run the tests.
 	export ENV=config/.env.test
-	uv run pytest -v --cov=app
+	$(UV) pytest -v --cov=app
 
 migrate:  ## Apply all migrations
 	$(ALEMBIC_CMD) upgrade head
