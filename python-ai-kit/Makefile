@@ -23,6 +23,9 @@ stop:	## Stops running instance
 down:	## Kills running instance
 	$(DOCKER_COMMAND) down
 
+check:	## Run pre-commit hook
+	$(UV) pre-commit run --all-files
+
 test:	## Run the tests.
 	export ENV=config/.env.test
 	$(UV) pytest -v --cov=app
