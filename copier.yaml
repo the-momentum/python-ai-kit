@@ -77,23 +77,19 @@ default_python_version:
     {% endfor %}
 
 add_dvc:
-  type: str
+  type: bool
   help: Add DVC (Data Version Control) to the project?
-  default: "no"
-  choices:
-    - "no"
-    - "yes"
+  default: false
 
 dvc_bucket_name:
   type: str
-  help: S3 bucket name for DVC remote (e.g. dvc-production-store)
-  when: "{{ add_dvc == 'yes' }}"
+  help: S3 bucket name for DVC remote
+  when: "{{ add_dvc }}"
 
 dvc_region:
   type: str
   help: AWS region for DVC remote
-  default: "{{ 'eu-central-1' if dvc_bucket_name == 'dvc-production-store' else '' }}"
-  when: "{{ add_dvc == 'yes' }}"
+  when: "{{ add_dvc }}"
 
 _exclude:
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
@@ -132,7 +128,7 @@ _exclude:
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
   - "{{ 'app/integrations/sentry.py' if 'sentry' not in plugins else '' }}"
-  - "{{ 'README_DVC.md' if add_dvc != 'yes' else '' }}"
+  - "{{ 'README_DVC.md' if not add_dvc else '' }}"
 
 _tasks:
   - command: uvx python -c "import shutil; shutil.move('README_{{project_type}}.md', 'README.md')"
@@ -144,11 +140,11 @@ _tasks:
   - "uv sync --group code-quality"
   - "git init && git checkout -b master"
   - command: dvc init
-    when: "{{ add_dvc == 'yes' }}"
+    when: "{{ add_dvc }}"
   - command: dvc remote add -d production s3://{{ dvc_bucket_name }}/{{ project_name }}
-    when: "{{ add_dvc == 'yes' }}"
+    when: "{{ add_dvc }}"
   - command: dvc remote modify production region {{ dvc_region }}
-    when: "{{ add_dvc == 'yes' }}"
+    when: "{{ add_dvc }}"
   - "git add --all"
   - command: uvx python -c "import subprocess; result = subprocess.run(['uv', 'run', 'pre-commit', 'run', '--all-files']); exit(0)"
   - "git add --all"
