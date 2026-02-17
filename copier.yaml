@@ -76,6 +76,27 @@ default_python_version:
     - "{{ver}}"
     {% endfor %}
 
+add_dvc:
+  type: bool
+  help: Add DVC (Data Version Control) to the project?
+  default: false
+
+dvc_remote_name:
+  type: str
+  help: Name for the DVC remote
+  default: "storage"
+  when: "{{ add_dvc }}"
+
+dvc_remote_url:
+  type: str
+  help: Full S3 path for DVC remote (e.g. s3://bucket-name/path)
+  when: "{{ add_dvc }}"
+
+dvc_region:
+  type: str
+  help: AWS region for DVC remote
+  when: "{{ add_dvc }}"
+
 _exclude:
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ 'app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
@@ -113,8 +134,20 @@ _exclude:
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
   - "{{ 'app/integrations/sentry.py' if 'sentry' not in plugins else '' }}"
-  
+  - "{{ 'README_DVC.md.jinja' if not add_dvc else '' }}"
+
 _tasks:
+  - command: |
+      uvx python -c "
+      import subprocess, sys
+      msg = 'DVC is not installed or not in PATH. Install it with: uv tool install dvc'
+      try:
+          subprocess.run(['dvc', '--version'], capture_output=True, timeout=10, check=True)
+      except (subprocess.CalledProcessError, FileNotFoundError):
+          sys.stderr.write(msg + chr(10))
+          sys.exit(1)
+      "
+    when: "{{ add_dvc }}"
   - command: uvx python -c "import shutil; shutil.move('README_{{project_type}}.md', 'README.md')"
     when: "{{ project_type in ['agent', 'mcp-server'] }}"
   - command: uvx python -c "import shutil; shutil.move('README_api.md', 'README.md')"
@@ -122,8 +155,14 @@ _tasks:
   - command: uvx python -c "import os; os.makedirs('migrations/versions', exist_ok=True)"
     when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
   - "uv sync --group code-quality"
-  - "git init && git checkout -b master && git add --all"
+  - "git init && git checkout -b master"
+  - command: dvc init
+    when: "{{ add_dvc }}"
+  - command: dvc remote add -d {{ dvc_remote_name }} {{ dvc_remote_url }}
+    when: "{{ add_dvc }}"
+  - command: dvc remote modify {{ dvc_remote_name }} region {{ dvc_region }}
+    when: "{{ add_dvc }}"
+  - "git add --all"
   - command: uvx python -c "import subprocess; result = subprocess.run(['uv', 'run', 'pre-commit', 'run', '--all-files']); exit(0)"
   - "git add --all"
   - command: uvx python -c "import subprocess; subprocess.run(['git', 'commit', '-m', 'Initial commit'])"
-

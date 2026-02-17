@@ -34,6 +34,16 @@ copier update --trust --defaults
 > - omit `--defaults` flag, if you want to update answers (like `python_versions`)
 > - you can also use flag `-r` here to update with template version from unreleased versions
 
+## 🔧 Optional add-ons
+
+Some setup options require extra tools to be installed beforehand. If you skip them, the template will fail when that option is selected.
+
+### DVC (Data Version Control)
+
+- **Requires:** `dvc` installed (e.g. `uv tool install dvc`) and, when enabled, **AWS CLI** with a profile that has access to your DVC S3 bucket.
+- **During setup:** You can enable DVC when prompted; you will then provide the full S3 path (starting with `s3://`) for the remote and the AWS region.
+- **After generation:** Set your AWS profile locally in the project root (stays out of Git):  
+  `dvc remote modify --local <remote-name> profile <your-aws-profile>` (use the remote name you chose during setup)
 
 ## Features
 
