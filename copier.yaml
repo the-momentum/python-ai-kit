@@ -76,6 +76,25 @@ default_python_version:
     - "{{ver}}"
     {% endfor %}
 
+add_dvc:
+  type: str
+  help: Add DVC (Data Version Control) to the project?
+  default: "no"
+  choices:
+    - "no"
+    - "yes"
+
+dvc_bucket_name:
+  type: str
+  help: S3 bucket name for DVC remote (e.g. dvc-production-store)
+  when: "{{ add_dvc == 'yes' }}"
+
+dvc_region:
+  type: str
+  help: AWS region for DVC remote
+  default: "{{ 'eu-central-1' if dvc_bucket_name == 'dvc-production-store' else '' }}"
+  when: "{{ add_dvc == 'yes' }}"
+
 _exclude:
   - "{{ 'migrations' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
   - "{{ 'app/database.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
@@ -113,7 +132,8 @@ _exclude:
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
   - "{{ 'app/integrations/sentry.py' if 'sentry' not in plugins else '' }}"
-  
+  - "{{ 'README_DVC.md' if add_dvc != 'yes' else '' }}"
+
 _tasks:
   - command: uvx python -c "import shutil; shutil.move('README_{{project_type}}.md', 'README.md')"
     when: "{{ project_type in ['agent', 'mcp-server'] }}"
@@ -122,8 +142,14 @@ _tasks:
   - command: uvx python -c "import os; os.makedirs('migrations/versions', exist_ok=True)"
     when: "{{ project_type in ['api-monolith', 'api-microservice', 'agent'] }}"
   - "uv sync --group code-quality"
-  - "git init && git checkout -b master && git add --all"
+  - "git init && git checkout -b master"
+  - command: dvc init
+    when: "{{ add_dvc == 'yes' }}"
+  - command: dvc remote add -d production s3://{{ dvc_bucket_name }}/{{ project_name }}
+    when: "{{ add_dvc == 'yes' }}"
+  - command: dvc remote modify production region {{ dvc_region }}
+    when: "{{ add_dvc == 'yes' }}"
+  - "git add --all"
   - command: uvx python -c "import subprocess; result = subprocess.run(['uv', 'run', 'pre-commit', 'run', '--all-files']); exit(0)"
   - "git add --all"
   - command: uvx python -c "import subprocess; subprocess.run(['git', 'commit', '-m', 'Initial commit'])"
-

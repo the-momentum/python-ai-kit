@@ -1,0 +1,66 @@
+# Data Version Control (DVC)
+
+DVC tracks large files (datasets, model weights, audio samples, etc.) outside of Git. It stores pointer files (`.dvc`) in your Git repository while the actual data lives in a shared S3 bucket. This means every commit in Git maps to a specific version of the data, without bloating the repository.
+
+## When to use DVC
+
+Use DVC whenever your project has files that are too large or too numerous for Git. Common examples:
+
+- Training datasets
+- Model weights and checkpoints
+- Audio/video/image corpora
+- Preprocessed feature files
+
+## Prerequisites
+
+- AWS CLI configured with a profile that has access to the DVC S3 bucket
+
+To get S3 access, ask your DevOps team to add your IAM user to the group.
+
+## Setup
+
+Configure your AWS profile. Use `--local` so it stays out of Git (each developer may use a different profile name):
+
+```bash
+dvc remote modify --local production profile <your-aws-profile>
+```
+
+## Daily workflow
+
+### Tracking a new file or directory
+
+```bash
+dvc add data/dataset.csv
+```
+
+This creates `data/dataset.csv.dvc` (a small pointer file) and adds `data/dataset.csv` to `.gitignore`. Commit both:
+
+```bash
+git add data/dataset.csv.dvc data/.gitignore
+git commit -m "track dataset"
+```
+
+### Pushing data to remote
+
+```bash
+dvc push
+```
+
+### Pulling data after cloning or switching branches
+
+```bash
+dvc pull
+```
+
+### Checking what's changed
+
+```bash
+dvc status
+```
+
+## How it works
+
+When you run `dvc add`, DVC hashes the file contents and stores the hash in the `.dvc` pointer file. The actual data is cached locally (in `.dvc/cache/`) and uploaded to S3 on `dvc push`. When a teammate runs `dvc pull`, DVC reads the `.dvc` files, downloads the matching data from S3, and places it in the working directory.
+
+The `.dvc/cache/` directory and actual data files are gitignored. Only the small `.dvc` pointer files are committed to Git.
+

@@ -12,6 +12,17 @@ uv tool install copier
 > [!TIP]
 > You can also just use `uvx` before `copier copy` command if you don't want to install this tool.
 
+Optionally, if you plan to enable DVC during setup, install it with:
+```bash
+uv tool install dvc
+```
+> [!IMPORTANT]
+> If you enabled DVC during setup: you need AWS CLI configured with a profile that has access to the DVC S3 bucket. After generating the project, set your profile locally (stays out of Git) in the project root:
+
+```bash
+dvc remote modify --local production profile <your-aws-profile>
+```
+
 To use this template, run:
 
 ```bash
@@ -33,7 +44,6 @@ copier update --trust --defaults
 > - your project HAS to be a git repo in order to use this command
 > - omit `--defaults` flag, if you want to update answers (like `python_versions`)
 > - you can also use flag `-r` here to update with template version from unreleased versions
-
 
 ## Features
 
@@ -105,6 +115,7 @@ The generated project includes:
 - AI agent integration with Streamlit GUI
 - Comprehensive testing setup
 - Modern Python tooling (uv, ruff, etc.)
+- Optional [DVC](https://dvc.org/) with S3 remote – enable during setup if you need data/artifact versioning; requires AWS CLI and bucket access. When enabled, the generated project includes **README_DVC.md** with full usage instructions.
 
 ---
 
