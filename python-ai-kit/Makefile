@@ -23,9 +23,12 @@ stop:	## Stops running instance
 down:	## Kills running instance
 	$(DOCKER_COMMAND) down
 
+check:	## Run pre-commit hook
+	$(UV) pre-commit run --all-files
+
 test:	## Run the tests.
 	export ENV=config/.env.test
-	uv run pytest -v --cov=app
+	$(UV) pytest -v --cov=app
 
 migrate:  ## Apply all migrations
 	$(ALEMBIC_CMD) upgrade head

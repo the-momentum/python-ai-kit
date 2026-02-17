@@ -3,8 +3,10 @@ import hmac
 from datetime import datetime, timezone
 from functools import lru_cache
 
+
 from fastapi import Request
 from pydantic import SecretStr
+
 from sqladmin.authentication import AuthenticationBackend
 
 from app.config import settings
@@ -21,11 +23,21 @@ class AdminAuth(AuthenticationBackend):
         username, password = form["username"], form["password"]
 
         if self._validate_credentials(str(username), str(password)):
-            current_token = self._get_current_token()
-            request.session.update({"token": current_token})
+            token, exp = self._generate_token_with_expiration()
+            request.session.update({"token": token, "exp": exp})
             return True
 
         return False
+
+    def _generate_token_with_expiration(
+        self,
+        expiration_time: float | None = None,
+    ) -> tuple[str, float]:
+        now_ts = datetime.now(timezone.utc).timestamp()
+        exp = expiration_time or (now_ts + self.TOKEN_TTL)
+        token = self._generate_token(str(exp))
+
+        return token, exp
 
     async def logout(self, request: Request) -> bool:
         request.session.clear()
@@ -33,33 +45,40 @@ class AdminAuth(AuthenticationBackend):
 
     async def authenticate(self, request: Request) -> bool:
         token = request.session.get("token")
-        if not token:
+        exp = request.session.get("exp")
+
+        if not token or not exp:
             return False
 
-        current_token = self._get_current_token()
+        # check if token is expired
+        if datetime.now(timezone.utc).timestamp() > exp:
+            return False
 
-        return hmac.compare_digest(token, current_token)
+        # compare tokens
+        expected_token, _ = self._generate_token_with_expiration(expiration_time=exp)
+
+        return hmac.compare_digest(token, expected_token)
 
     def _validate_credentials(self, username: str, password: str) -> bool:
-        return username == settings.SQLADMIN_USER and password == self.VALID_PASSWORD
+        return self._are_admin_credentials_valid(username, password)
 
-    def _get_current_token(self) -> str:
-        current_time = datetime.now(timezone.utc)
-        time_slot = self._get_time_slot(current_time)
-        return self._generate_token(time_slot)
-
-    def _generate_token(self, time_slot: str) -> str:
+    def _generate_token(self, msg: str) -> str:
         return hmac.new(
-            self._secret_key, time_slot.encode(), hashlib.sha256
+            self._secret_key,
+            msg.encode(),
+            hashlib.sha256,
         ).hexdigest()
 
-    def _get_time_slot(self, dt: datetime) -> str:
-        if self.TOKEN_TTL <= 0:
-            return dt.isoformat()
-
-        timestamp = int(dt.timestamp())
-        slot_number = timestamp // self.TOKEN_TTL
-        return str(slot_number)
+    def _are_admin_credentials_valid(self, username: str, password: str) -> bool:
+        is_valid_username: bool = hmac.compare_digest(
+            username,
+            settings.SQLADMIN_USER,
+        )
+        is_valid_password: bool = hmac.compare_digest(
+            password,
+            self.VALID_PASSWORD,
+        )
+        return is_valid_username and is_valid_password
 
     @property
     def VALID_PASSWORD(self) -> str:  # noqa: N802
