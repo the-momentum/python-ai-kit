@@ -1,0 +1,15 @@
+{% if project_type in ['api-monolith', 'api-microservice'] %}
+{% include 'python-ai-kit/README_api_body.jinja' %}
+{% elif project_type == 'agent' %}
+{% include 'python-ai-kit/README_agent_body.jinja' %}
+{% elif project_type == 'mcp-server' %}
+{% include 'python-ai-kit/README_mcp_server_body.jinja' %}
+{% endif %}
+
+{% if add_dvc %}
+{% include 'python-ai-kit/README_DVC.md.jinja' %}
+{% endif %}
+
+---
+
+This project was generated from the [Python AI Kit](https://github.com/the-momentum/python-ai-kit).
