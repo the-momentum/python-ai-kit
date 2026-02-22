@@ -112,7 +112,7 @@ _exclude:
   - "{{ 'app/repositories.py' if project_type != 'api-monolith' else '' }}"
   - "{{ 'app/services.py' if project_type != 'api-monolith' else '' }}"
 
-  - "{{ 'app/schemas/user.py' if project_type != 'api-microservice' else '' }}"
+  - "{{ 'app/schemas/user.py' if project_type != 'api-microservice' and 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/services' if project_type != 'api-microservice' else '' }}"
   - "{{ 'app/repositories' if project_type != 'api-microservice' else '' }}"
   - "{{ 'app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"
