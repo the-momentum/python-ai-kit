@@ -43,6 +43,9 @@ services:
 
   celery-worker:
     container_name: celery-worker__{{project_name}}
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: {{project_name}}:latest
     command: scripts/start/worker.sh
     volumes:
@@ -56,6 +59,9 @@ services:
 
   celery-beat:
     container_name: celery-beat__{{project_name}}
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: {{project_name}}:latest
     command: scripts/start/beat.sh
     volumes:
@@ -69,6 +75,9 @@ services:
 
   flower:
     container_name: flower__{{project_name}}
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: {{project_name}}:latest
     command: scripts/start/flower.sh
     volumes:
