@@ -24,7 +24,7 @@ class ChatResponse(BaseModel):
     error: str | None = None
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat")
 async def chat(request: ChatRequest) -> ChatResponse:
     """Chat endpoint using workflow with AgentManager factory."""
     logger.info(f"Received chat request: {request.message[:50]}... (MCP: {request.use_mcp})")
