@@ -78,7 +78,7 @@ ignore = [
     "RET503", # implicit-return
 ]
 
-{% if project_type == "api-monolith" %}
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 [tool.ruff.lint.per-file-ignores]
 "app/*/routes/*/*.py" = ["ANN201"]
 # ignoring annotation of return type of FastAPI endpoints to use just reponse_model

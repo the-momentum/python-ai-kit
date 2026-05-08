@@ -1,10 +1,12 @@
+from typing import Any
+
 from app.agent.engines.routers import GenericRouter
 from app.agent.engines.guardrails import OutputReformatterWorker
 from app.agent.agent_manager import agent_manager
 from app.config import settings
 
 
-async def get_workflow_dependencies(mcp_url: str | None = None):
+async def get_workflow_dependencies(mcp_url: str | None = None) -> dict[str, Any]:
     """Get dependencies needed for the workflow"""
     use_mcp = mcp_url is not None
     await agent_manager.initialize(use_mcp=use_mcp, mcp_url=mcp_url)
