@@ -25,7 +25,7 @@ class ChatResponse(BaseModel):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest) -> ChatResponse:
+async def chat(request: ChatRequest):
     """Chat endpoint using workflow with AgentManager factory."""
     logger.info(f"Received chat request: {request.message[:50]}... (MCP: {request.use_mcp})")
     
