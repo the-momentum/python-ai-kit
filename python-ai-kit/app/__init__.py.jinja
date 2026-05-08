@@ -5,7 +5,7 @@ try:
     {% if project_type == "api-monolith" %}
     from app.user.models import User  # noqa: F401
     {% elif project_type == "api-microservice" %}
-    from app.models import *  # noqa: F401
+    from app.models import *  # noqa: F401, F403
     {% endif %}
 except ImportError:
     traceback.print_exc()
