@@ -116,6 +116,11 @@ _exclude:
   - "{{ 'app/services' if project_type != 'api-microservice' else '' }}"
   - "{{ 'app/repositories' if project_type != 'api-microservice' else '' }}"
   - "{{ 'app/api/routes/v1/user.py' if project_type != 'api-microservice' else '' }}"
+  - "{{ 'app/schemas/chat.py' if project_type == 'api-microservice' else '' }}"
+  - "{{ 'app/schemas/agent.py' if project_type == 'api-microservice' else '' }}"
+  - "{{ 'app/schemas/message.py' if project_type == 'api-microservice' else '' }}"
+  - "{{ 'app/schemas/deps.py' if project_type == 'api-microservice' else '' }}"
+  - "{{ 'app/api/routes/v1/chat.py' if project_type == 'api-microservice' else '' }}"
 
   - "{{ 'app/api' if project_type not in ['api-microservice', 'agent'] else '' }}"
   - "{{ 'app/models' if project_type not in ['api-microservice', 'agent'] else '' }}"
