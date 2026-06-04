@@ -1,11 +1,10 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import Depends
-
-from app.database import DbSession
+from app.database import AsyncDbSession
 from app.user.repositories import ActivityRepository
 from app.utils.exceptions import handle_exceptions
+from fastapi import Depends
 
 if TYPE_CHECKING:
     from app.user.services import UserService
@@ -17,10 +16,10 @@ class ActivityMixin:
         super().__init__(**kwargs)
 
     @handle_exceptions
-    def is_user_active(
+    async def is_user_active(
         self: "UserService",
-        db_session: DbSession,
+        db_session: AsyncDbSession,
         object_id: UUID,
     ) -> bool:
         self.logger.info(f"Checking if user with ID: {object_id} is active.")
-        return self.activity_repository.is_user_active(db_session, object_id)
+        return await self.activity_repository.is_user_active(db_session, object_id)

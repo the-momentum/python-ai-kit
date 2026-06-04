@@ -122,6 +122,14 @@ class Settings(BaseSettings):
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
 
+    @property
+    def db_async_uri(self) -> str:
+        return (
+            f"postgresql+asyncpg://"
+            f"{self.db_user}:{self.db_password.get_secret_value()}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
     {% endif %}
     # 0. pytest ini_options
     # 1. environment variables
