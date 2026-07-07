@@ -1,3 +1,7 @@
+x-shared-build: &shared-build
+  context: .
+  dockerfile: Dockerfile
+
 services:
   db:
     image: postgres:18
@@ -17,9 +21,7 @@ services:
       - postgres_data:/var/lib/postgresql
 
   app:
-    build:
-        context: .
-        dockerfile: Dockerfile
+    build: *shared-build
     container_name: backend__{{project_name}}
     image: {{project_name}}:latest
     command: scripts/start/app.sh
@@ -43,6 +45,7 @@ services:
 
   celery-worker:
     container_name: celery-worker__{{project_name}}
+    build: *shared-build
     image: {{project_name}}:latest
     command: scripts/start/worker.sh
     volumes:
@@ -56,6 +59,7 @@ services:
 
   celery-beat:
     container_name: celery-beat__{{project_name}}
+    build: *shared-build
     image: {{project_name}}:latest
     command: scripts/start/beat.sh
     volumes:
@@ -69,6 +73,7 @@ services:
 
   flower:
     container_name: flower__{{project_name}}
+    build: *shared-build
     image: {{project_name}}:latest
     command: scripts/start/flower.sh
     volumes:
