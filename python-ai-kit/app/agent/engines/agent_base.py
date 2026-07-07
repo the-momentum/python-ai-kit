@@ -4,7 +4,7 @@ from typing import Any, Type
 from pydantic_ai import Agent, RunContext, UsageLimits
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.run import AgentRunResult
-from pydantic_ai.mcp import MCPServerStreamableHTTP
+from pydantic_ai.mcp import MCPToolset
 
 from app.config import settings
 from app.utils.llm_vendor import set_api_key_for_vendor
@@ -56,8 +56,8 @@ class BaseAgent(ABC):
                             print(f"Invalid MCP URL format: {mcp_url}")
                         continue
                     
-                    mcp_server = MCPServerStreamableHTTP(mcp_url)
-                    toolsets.append(mcp_server)
+                    mcp_toolset = MCPToolset(mcp_url)
+                    toolsets.append(mcp_toolset)
                     if self.verbose:
                         print(f"MCP server enabled: {mcp_url}")
                 except Exception as e:
@@ -104,6 +104,6 @@ class BaseAgent(ABC):
         result = await self.agent.run(**run_kwargs)
         
         if self.verbose:
-            print(f"Usage: {result.usage()}")
+            print(f"Usage: {result.usage}")
         
         return result
