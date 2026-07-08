@@ -1,6 +1,7 @@
-from app.agent.factories.workflow_factory import WorkflowAgentFactory
-from app.agent.engines.pdf_agent import PDFAgent
+from app.agent.engines.pdf_agent import PDFAgent  # ty: ignore[unresolved-import]
+
 from app.agent.agent_manager import AgentManager
+from app.agent.factories.workflow_factory import WorkflowAgentFactory
 
 
 class PDFFactory:
@@ -12,9 +13,7 @@ class PDFFactory:
         manager = await WorkflowAgentFactory.create_manager()
 
         # Add your custom agent
-        manager.register('pdf_agent', PDFAgent,
-                         pdf_path=pdf_path,
-                         verbose=True)
+        manager.register("pdf_agent", PDFAgent, pdf_path=pdf_path, verbose=True)
 
         await manager.initialize()
         return manager

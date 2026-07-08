@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, ClassVar
 
 from fastapi import Request
 from pydantic import BaseModel
@@ -61,10 +61,10 @@ class BaseAdminView(ModelView, metaclass=BaseAdminMeta):
     _create_schema: type[BaseModel]
     _update_schema: type[BaseModel]
 
-    column_list: str | list[str] = "__all__"
+    column_list: ClassVar[str | list[str]] = "__all__"
 
     # by default metaclass excludes fields from schemas with default_factory
-    form_excluded_columns: list[str] = []
+    form_excluded_columns: ClassVar[list[str]] = []
     # fields with PrimaryKey in SQLAchemy model are always excluded
     # add form_include_pk=True to your target class to override this behavior
 

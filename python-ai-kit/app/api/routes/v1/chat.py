@@ -1,12 +1,13 @@
 import asyncio
 import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.agent.factories.workflow_factory import WorkflowAgentFactory
 from app.agent.workflows.agent_workflow import user_assistant_graph
-from app.agent.workflows.nodes import StartNode
 from app.agent.workflows.generation_events import WorkflowState
+from app.agent.workflows.nodes import StartNode
 from app.config import settings
 
 router = APIRouter()
@@ -28,42 +29,31 @@ class ChatResponse(BaseModel):
 async def chat(request: ChatRequest):
     """Chat endpoint using workflow with AgentManager factory."""
     logger.info(f"Received chat request: {request.message[:50]}... (MCP: {request.use_mcp})")
-    
+
     try:
         mcp_urls = request.mcp_urls if request.use_mcp else None
-        
+
         manager = await WorkflowAgentFactory.create_manager(
-            use_mcp=request.use_mcp,
-            mcp_urls=mcp_urls,
-            language=settings.default_language
+            use_mcp=request.use_mcp, mcp_urls=mcp_urls, language=settings.default_language
         )
-        
+
         initial_state = WorkflowState()
-        
+
         result = await asyncio.wait_for(
             user_assistant_graph.run(
-                start_node=StartNode(),
+                inputs=StartNode(),
                 state=initial_state,
-                deps=manager.to_deps(
-                    message=request.message,
-                    language=settings.default_language
-                )
+                deps=manager.to_deps(message=request.message, language=settings.default_language),
             ),
-            timeout=settings.timeout
+            timeout=settings.timeout,
         )
-        
+
         logger.info("Chat request processed successfully")
-        return ChatResponse(response=result.output)
-        
+        return ChatResponse(response=result)
+
     except asyncio.TimeoutError:
         logger.error("Chat request timeout")
-        return ChatResponse(
-            response="",
-            error="Request timeout. Please try again."
-        )
+        return ChatResponse(response="", error="Request timeout. Please try again.")
     except Exception as e:
         logger.error(f"Chat request failed: {e}")
-        return ChatResponse(
-            response="",
-            error=f"An error occurred: {str(e)}"
-        )
+        return ChatResponse(response="", error=f"An error occurred: {str(e)}")

@@ -1,17 +1,20 @@
 import os
 
 
-def set_api_key_for_vendor(vendor: str, api_key: str) -> None:
+def set_api_key_for_vendor(vendor: str, api_key: str | None) -> None:
     """Set the appropriate API key environment variable for the vendor.
-    
+
     Args:
         vendor: The AI provider vendor (e.g., 'openai', 'anthropic', 'google')
-        api_key: The API key to set
+        api_key: The API key to set; when None, the environment is left unchanged
     """
+    if api_key is None:
+        return
+
     # Map vendors to their environment variable names
     env_var_map = {
         "openai": "OPENAI_API_KEY",
-        "anthropic": "ANTHROPIC_API_KEY", 
+        "anthropic": "ANTHROPIC_API_KEY",
         "google": "GOOGLE_API_KEY",
         "groq": "GROQ_API_KEY",
         "mistral": "MISTRAL_API_KEY",
@@ -20,7 +23,7 @@ def set_api_key_for_vendor(vendor: str, api_key: str) -> None:
         "huggingface": "HUGGINGFACE_API_KEY",
         # OpenAI-compatible providers
         "deepseek": "OPENAI_API_KEY",
-        "grok": "OPENAI_API_KEY", 
+        "grok": "OPENAI_API_KEY",
         "ollama": "OPENAI_API_KEY",  # Ollama doesn't need API key
         "openrouter": "OPENAI_API_KEY",
         "vercel": "OPENAI_API_KEY",
@@ -33,6 +36,6 @@ def set_api_key_for_vendor(vendor: str, api_key: str) -> None:
         "cerebras": "OPENAI_API_KEY",
         "litellm": "OPENAI_API_KEY",
     }
-    
+
     env_var = env_var_map.get(vendor, "API_KEY")
     os.environ[env_var] = api_key

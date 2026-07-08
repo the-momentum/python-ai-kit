@@ -1,16 +1,23 @@
-from pydantic_graph import Graph
+from pydantic_graph import GraphBuilder
 
+from app.agent.workflows.generation_events import WorkflowState
 from app.agent.workflows.nodes import (
-    StartNode,
     ClassifyNode,
     GenerateNode,
     GuardrailsNode,
-    TranslateNode,
     RefuseNode,
+    StartNode,
+    TranslateNode,
 )
 
-
-user_assistant_graph = Graph(
-    nodes=(StartNode, ClassifyNode, GenerateNode, GuardrailsNode, TranslateNode, RefuseNode),
-    name="UserAssistantWorkflow"
+builder = GraphBuilder(
+    name="UserAssistantWorkflow",
+    state_type=WorkflowState,
+    deps_type=dict,
+    output_type=str,
 )
+builder.add(builder.edge_from(builder.start_node).to(StartNode))
+for node in (StartNode, ClassifyNode, GenerateNode, GuardrailsNode, TranslateNode, RefuseNode):
+    builder.add(builder.node(node))
+
+user_assistant_graph = builder.build()

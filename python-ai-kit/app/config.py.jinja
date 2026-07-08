@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     paging_limit: int = 100
     cors_origins: list[AnyHttpUrl] = []
     cors_allow_all: bool = False
-    {% if project_type in ["api-monolith", "api-microservice"] %}
+    {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 
     # DATABASE SETTINGS
     db_host: str = "localhost"
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
     @field_validator('mcp_urls', mode='before')
     @classmethod
-    def parse_mcp_urls(cls, v):
+    def parse_mcp_urls(cls, v: str | list[str]) -> list[str]:
         """Parse MCP URLs from environment variable (comma-separated string or list)."""
         if isinstance(v, str):
             return [url.strip() for url in v.split(',') if url.strip()]
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     mcp_server_name: str = f"MCP Server"
 
     {% endif %}
-    {% if project_type in ["api-monolith", "api-microservice"] %}
+    {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     @property
     def db_uri(self) -> str:
         return (
@@ -131,7 +131,7 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def _get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    return Settings()  # type: ignore[call-arg]{% if project_type == "agent" or "celery" in plugins %}  # ty: ignore[missing-argument]{% endif %}
 
 
 settings = _get_settings()

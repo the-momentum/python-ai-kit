@@ -19,9 +19,9 @@ def get_weekday_from_date(
     date_to_convert: Annotated[str, "Date to establish a weekday for"],
 ) -> str:
     parsing_output = handle_llm_date(date_to_convert)
-    if isinstance(date_to_convert, datetime):
-        parsing_output = parsing_output.strftime("%A")
-    return str(parsing_output)
+    if isinstance(parsing_output, datetime):
+        return parsing_output.strftime("%A")
+    return parsing_output
 
 
 def handle_llm_date(input_date: str) -> datetime | str:

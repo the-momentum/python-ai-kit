@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from sqlalchemy import text
+from sqlalchemy.pool import QueuePool
 
 from app.database import DbSession, engine
 
@@ -9,6 +10,8 @@ healthcheck_router = APIRouter()
 def get_pool_status() -> dict[str, str]:
     """Get connection pool status for monitoring."""
     pool = engine.pool
+    if not isinstance(pool, QueuePool):
+        return {"pool_type": type(pool).__name__}
     return {
         "max_pool_size": str(pool.size()),
         "connections_ready_for_reuse": str(pool.checkedin()),

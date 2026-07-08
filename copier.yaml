@@ -119,7 +119,6 @@ _exclude:
   - "{{ 'app/schemas/chat.py' if project_type != 'agent' else '' }}"
   - "{{ 'app/schemas/agent.py' if project_type != 'agent' else '' }}"
   - "{{ 'app/schemas/message.py' if project_type != 'agent' else '' }}"
-  - "{{ 'app/schemas/deps.py' if project_type != 'agent' else '' }}"
   - "{{ 'app/schemas/error_code.py' if project_type == 'api-monolith' else '' }}"
   - "{{ 'app/schemas/filter_params.py' if project_type == 'agent' else '' }}"
   - "{{ 'app/api/routes/v1/chat.py' if project_type == 'api-microservice' else '' }}"

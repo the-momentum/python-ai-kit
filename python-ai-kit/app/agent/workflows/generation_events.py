@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from app.schemas.agent import TaskType
 
 
@@ -14,7 +15,7 @@ class TextEvaluationState:
     message: str
 
 
-@dataclass  
+@dataclass
 class TextGenerationState:
     message: str
     task_type: TaskType
@@ -43,6 +44,6 @@ class WorkflowState:
     task_type: TaskType | None = None
     generated_response: str = ""
     refusal_info: RefusalInfo | None = None
-    
-    def set_refusal(self, message: str, reason: str):
+
+    def set_refusal(self, message: str, reason: str) -> None:
         self.refusal_info = RefusalInfo(refusal_reason=reason)

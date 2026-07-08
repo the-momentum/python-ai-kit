@@ -1,15 +1,16 @@
 import asyncio
-import time
 import os
+import time
 
 import streamlit as st
-from streamlit.errors import StreamlitSecretNotFoundError
 from openai import AuthenticationError
-from pydantic_core._pydantic_core import ValidationError
 from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_core._pydantic_core import ValidationError
+from streamlit.errors import StreamlitSecretNotFoundError
 
 try:
     from app.config import settings
+
     os.environ["API_KEY"] = settings.api_key
 except (ValidationError, AttributeError):
     # Try to authenticate with streamlit secrets
@@ -32,9 +33,8 @@ except StreamlitSecretNotFoundError:
 
 from app.agent.factories.workflow_factory import WorkflowAgentFactory
 from app.agent.workflows.agent_workflow import user_assistant_graph
-from app.agent.workflows.nodes import StartNode
 from app.agent.workflows.generation_events import WorkflowState
-
+from app.agent.workflows.nodes import StartNode
 
 if "chats" not in st.session_state:
     st.session_state.chats = 1
@@ -47,7 +47,7 @@ if "default_language" not in st.session_state:
 
 
 def geticon(chat_number: int) -> str:
-    return '📌' if chat_number == st.session_state.active_chat else '💤'
+    return "📌" if chat_number == st.session_state.active_chat else "💤"
 
 
 # ---------------------------------------------------------------
@@ -61,79 +61,73 @@ st.divider()
 
 with st.sidebar:
     st.header("Settings")
-    
+
     # Language settings
     selected_language = st.text_input(
         "🌍 Language",
         value=st.session_state.default_language,
         placeholder="e.g. english, polish, español, 中文, français...",
-        help="Language for AI responses and interface. You can use any language name."
+        help="Language for AI responses and interface. You can use any language name.",
     )
-    
+
     if selected_language and selected_language != st.session_state.default_language:
         st.session_state.default_language = selected_language
         st.rerun()
-    
+
     # Token limits
     st.subheader("Token Limits")
-    
+
     col1, col2 = st.columns(2)
     with col1:
         max_output_tokens = st.number_input(
-            "Max Output Tokens",
-            value=settings.max_output_tokens or 100000,
-            help="Maximum tokens for AI responses"
+            "Max Output Tokens", value=settings.max_output_tokens or 100000, help="Maximum tokens for AI responses"
         )
     with col2:
         max_input_tokens = st.number_input(
-            "Max Input Tokens", 
-            value=settings.max_input_tokens or 100000,
-            help="Maximum tokens for input context"
+            "Max Input Tokens", value=settings.max_input_tokens or 100000, help="Maximum tokens for input context"
         )
-    
+
     settings.max_output_tokens = max_output_tokens
     settings.max_input_tokens = max_input_tokens
-    
+
     st.divider()
-    
+
     # MCP settings
     use_mcp = st.checkbox(
-        "📡 Enable MCP Servers", 
-        value=settings.mcp_enabled,
-        help="Enable Model Context Protocol server integration"
+        "📡 Enable MCP Servers", value=settings.mcp_enabled, help="Enable Model Context Protocol server integration"
     )
-    
+
     if use_mcp:
         if not st.session_state.mcp_urls:
             st.info("📡 No MCP servers configured. Add URLs below to enable MCP integration.")
         else:
             st.info(f"📡 {len(st.session_state.mcp_urls)} MCP server(s) configured")
-        
+
         # Display current URLs
         for i, url in enumerate(st.session_state.mcp_urls):
             col1, col2 = st.columns([4, 1])
             with col1:
-                st.text_input(f"URL {i+1}", value=url, key=f"mcp_url_{i}", disabled=True)
+                st.text_input(f"URL {i + 1}", value=url, key=f"mcp_url_{i}", disabled=True)
             with col2:
                 if st.button("🗑️", key=f"delete_{i}", help="Delete this URL"):
                     st.session_state.mcp_urls.pop(i)
                     st.rerun()
-        
+
         # Add new URL
         new_url = st.text_input("Add new MCP URL", placeholder="http://127.0.0.1:8000/mcp")
         if st.button("Add URL") and new_url:
-            if not new_url.startswith(('http://', 'https://')):
+            if not new_url.startswith(("http://", "https://")):
                 st.error("URL must start with http:// or https://")
             elif new_url in st.session_state.mcp_urls:
                 st.warning("URL already exists")
             else:
                 st.session_state.mcp_urls.append(new_url)
                 st.rerun()
-        
+
         settings.mcp_urls = st.session_state.mcp_urls.copy()
-    
+
     st.divider()
-    
+
     col1, col2 = st.columns([3, 1])
     with col1:
         if st.button("New chat", icon="💡"):
@@ -145,7 +139,7 @@ with st.sidebar:
             current_chat = st.session_state.active_chat
             if current_chat in st.session_state:
                 del st.session_state[f"messages{current_chat}"]
-            
+
             # If deleting the last chat, create a new one
             if st.session_state.chats == 1:
                 st.session_state.chats = 1
@@ -154,56 +148,57 @@ with st.sidebar:
                 # Shift chat numbers down
                 for i in range(current_chat + 1, st.session_state.chats + 1):
                     if f"messages{i}" in st.session_state:
-                        st.session_state[f"messages{i-1}"] = st.session_state[f"messages{i}"]
+                        st.session_state[f"messages{i - 1}"] = st.session_state[f"messages{i}"]
                         del st.session_state[f"messages{i}"]
-                
+
                 st.session_state.chats -= 1
                 if st.session_state.active_chat > st.session_state.chats:
                     st.session_state.active_chat = st.session_state.chats
-            
+
             st.rerun()
-    
+
     st.divider()
-    
+
     for chat_nr in range(1, st.session_state["chats"] + 1):
         col1, col2 = st.columns([4, 1])
         with col1:
-            if st.button(f"Chat {chat_nr}",
-                         key=f"chat{chat_nr}", icon=geticon(chat_nr)):
+            if st.button(f"Chat {chat_nr}", key=f"chat{chat_nr}", icon=geticon(chat_nr)):
                 st.session_state.active_chat = chat_nr
                 st.rerun()
         with col2:
-            if st.button("🗑️", key=f"delete_chat{chat_nr}", help="Delete this chat", disabled=st.session_state.chats <= 1):
+            if st.button(
+                "🗑️", key=f"delete_chat{chat_nr}", help="Delete this chat", disabled=st.session_state.chats <= 1
+            ):
                 # Delete specific chat
                 if f"messages{chat_nr}" in st.session_state:
                     del st.session_state[f"messages{chat_nr}"]
-                
+
                 # Shift remaining chats down
                 for i in range(chat_nr + 1, st.session_state.chats + 1):
                     if f"messages{i}" in st.session_state:
-                        st.session_state[f"messages{i-1}"] = st.session_state[f"messages{i}"]
+                        st.session_state[f"messages{i - 1}"] = st.session_state[f"messages{i}"]
                         del st.session_state[f"messages{i}"]
-                
+
                 st.session_state.chats -= 1
                 if st.session_state.active_chat >= chat_nr and st.session_state.active_chat > 1:
                     st.session_state.active_chat -= 1
                 elif st.session_state.active_chat > st.session_state.chats:
                     st.session_state.active_chat = st.session_state.chats
-                
+
                 st.rerun()
 
 # -----------------------------
 
 
-if f"messages{st.session_state["active_chat"]}" not in st.session_state:
-    st.session_state[f"messages{st.session_state["chats"]}"] = []
+if f"messages{st.session_state['active_chat']}" not in st.session_state:
+    st.session_state[f"messages{st.session_state['chats']}"] = []
 
-for message in st.session_state[f"messages{st.session_state["active_chat"]}"]:
+for message in st.session_state[f"messages{st.session_state['active_chat']}"]:
     with st.chat_message(message["role"]):
         st.markdown(message["text"])
 
 if prompt := st.chat_input("Ask me something"):
-    st.session_state[f"messages{st.session_state["active_chat"]}"].append({"role": "human", "text": prompt})
+    st.session_state[f"messages{st.session_state['active_chat']}"].append({"role": "human", "text": prompt})
 
     with st.chat_message("human"):
         st.markdown(prompt)
@@ -215,54 +210,57 @@ if prompt := st.chat_input("Ask me something"):
         try:
             with st.spinner("running...", show_time=True):
                 mcp_urls = st.session_state.mcp_urls if use_mcp else None
-                
+
                 # Try with MCP first, fallback to without MCP if it fails
                 try:
-                    manager = asyncio.run(WorkflowAgentFactory.create_manager(
-                        use_mcp=use_mcp,
-                        mcp_urls=mcp_urls,
-                        language=st.session_state.default_language
-                    ))
+                    manager = asyncio.run(
+                        WorkflowAgentFactory.create_manager(
+                            use_mcp=use_mcp, mcp_urls=mcp_urls, language=st.session_state.default_language
+                        )
+                    )
                 except Exception as mcp_error:
                     if use_mcp and ("MCP" in str(mcp_error) or "mcp" in str(mcp_error)):
                         st.warning("MCP servers failed, running without MCP...")
-                        manager = asyncio.run(WorkflowAgentFactory.create_manager(
-                            use_mcp=False,
-                            mcp_urls=None,
-                            language=st.session_state.default_language
-                        ))
+                        manager = asyncio.run(
+                            WorkflowAgentFactory.create_manager(
+                                use_mcp=False, mcp_urls=None, language=st.session_state.default_language
+                            )
+                        )
                     else:
                         raise mcp_error
-                
+
                 initial_state = WorkflowState()
-                
+
                 # Convert Streamlit messages to Pydantic AI messages
                 chat_history = []
                 for msg in st.session_state[f"messages{st.session_state['active_chat']}"]:
                     if msg["role"] == "human":
                         from pydantic_ai.messages import ModelRequest, UserPromptPart
+
                         chat_history.append(ModelRequest(parts=[UserPromptPart(content=msg["text"])]))
                     elif msg["role"] == "assistant":
                         from pydantic_ai.messages import ModelResponse, TextPart
+
                         chat_history.append(ModelResponse(parts=[TextPart(content=msg["text"])]))
-                
+
                 result = asyncio.run(
                     user_assistant_graph.run(
-                        start_node=StartNode(),
+                        inputs=StartNode(),
                         state=initial_state,
                         deps=manager.to_deps(
-                            message=prompt,
-                            language=st.session_state.default_language,
-                            chat_history=chat_history
-                        )
+                            message=prompt, language=st.session_state.default_language, chat_history=chat_history
+                        ),
                     )
                 )
-                
-                response = result.output
+
+                response = result
         except UsageLimitExceeded as e:
             st.warning(f"⚠️ Token limit exceeded: {str(e)}")
             st.info("💡 Try reducing your message length or increasing token limits in settings.")
-            response = "I apologize, but I've reached the token limit for this response. Please try with a shorter message or adjust the token limits in settings."
+            response = (
+                "I apologize, but I've reached the token limit for this response. "
+                "Please try with a shorter message or adjust the token limits in settings."
+            )
         except ExceptionGroup as e:
             error_msg = str(e)
             st.warning(f"🔌 MCP Server Connection Error: {error_msg}")
@@ -270,7 +268,10 @@ if prompt := st.chat_input("Ask me something"):
             for i, url in enumerate(st.session_state.mcp_urls, 1):
                 st.text(f"  {i}. {url}")
             st.info("You can disable MCP servers or fix the URLs in the sidebar.")
-            response = "I'm having trouble connecting to external tools. Please check your MCP server configuration or disable MCP servers in settings."
+            response = (
+                "I'm having trouble connecting to external tools. "
+                "Please check your MCP server configuration or disable MCP servers in settings."
+            )
         except AuthenticationError:
             st.warning("Please provide an api key in .env")
             response = ""
@@ -291,7 +292,9 @@ if prompt := st.chat_input("Ask me something"):
             time.sleep(0.04)
             placeholder.markdown(full_response + "▌")
         placeholder.markdown(full_response)
-        st.session_state[f"messages{st.session_state["active_chat"]}"].append({"role": "assistant", "text": full_response})
+        st.session_state[f"messages{st.session_state['active_chat']}"].append(
+            {"role": "assistant", "text": full_response}
+        )
 
 
 # ---------------------------------------------------------------

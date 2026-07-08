@@ -5,7 +5,7 @@ from celery.schedules import crontab
 
 
 def create_celery() -> Celery:
-    celery_app: Celery = current_celery_app  # type: ignore[assignment]
+    celery_app: Celery = current_celery_app  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
     celery_app.conf.update(
         broker_url=settings.CELERY_BROKER_URL,
         result_backend=settings.CELERY_RESULT_BACKEND,
