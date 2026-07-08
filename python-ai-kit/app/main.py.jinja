@@ -31,7 +31,9 @@ from app.integrations.sentry import init_sentry
 from app.integrations.sqladmin import add_admin_views
 from app.integrations.sqladmin import admin_authentication_backend 
 {% endif %}
+{% if project_type != "mcp-server" %}
 from app.middlewares import add_cors_middleware
+{% endif %}
 {% if project_type in ["api-monolith", "api-microservice"] %}
 from app.utils.exceptions import handle_exception
 {% endif %}
