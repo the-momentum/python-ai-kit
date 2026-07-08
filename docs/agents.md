@@ -14,11 +14,11 @@ First, install the project dependencies:
 uv sync
 ```
 
-Then, create a `.env` file in the project root with your API key:
+Then, create a `.env` file in the `config/` directory with your API key:
 
 ```bash
-# Create .env file
-echo "API_KEY=your_api_key_here" > .env
+# Create config/.env file
+echo "API_KEY=your_api_key_here" > config/.env
 ```
 
 Replace `your_api_key_here` with your actual API key for the LLM provider you're using.
