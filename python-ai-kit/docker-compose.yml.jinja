@@ -35,12 +35,8 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./app:/root_project/app
-      - type: bind
-        source: ./config/.env
-        target: /root_project/config/.env
-        bind:
-          create_host_path: false
+      - .:/root_project
+      - /root_project/.venv
     restart: on-failure
 
   celery-worker:
