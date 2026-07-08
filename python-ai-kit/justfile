@@ -1,0 +1,44 @@
+set windows-shell := ["cmd.exe", "/c"]
+
+docker_command := "docker compose -f docker-compose.yml"
+alembic_cmd := "uv run alembic"
+
+# Show this help
+default:
+    @just --list
+
+# Builds docker image
+build:
+    {{docker_command}} build --no-cache
+
+# Runs the environment in detached mode
+run:
+    {{docker_command}} up -d --force-recreate
+
+# Runs the non-detached environment
+up:
+    {{docker_command}} up --force-recreate
+
+# Stops running instance
+stop:
+    {{docker_command}} stop
+
+# Kills running instance
+down:
+    {{docker_command}} down
+
+# Run the tests
+test $ENV="config/.env.test":
+    uv run pytest -v --cov=app
+
+# Apply all migrations
+migrate:
+    {{alembic_cmd}} upgrade head
+
+# Create a new migration. Use 'just create-migration "Description of the change"'
+create-migration m:
+    {{alembic_cmd}} revision --autogenerate -m "{{m}}"
+
+# Revert the last migration
+downgrade:
+    {{alembic_cmd}} downgrade -1

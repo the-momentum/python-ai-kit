@@ -20,7 +20,7 @@ tests/
 *.spec.*
 
 setup.cfg
-Makefile
+justfile
 
 .*
 

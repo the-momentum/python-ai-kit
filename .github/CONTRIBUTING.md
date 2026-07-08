@@ -2,7 +2,7 @@
 
 1. Fork the repository.
 2. Clone your fork.
-3. Make sure `uv` is installed.
+3. Make sure `uv` and [`just`](https://github.com/casey/just) are installed.
 5. Generate project of chosen template type.
 6. Switch there, develop changes.
 7. Come back to forked main repository, create new branch nad move your changes to corresponding directories here, remember to include jinja syntax if some changes are not binded to all templates types.

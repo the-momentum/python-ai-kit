@@ -5,6 +5,7 @@ A FastAPI application with PostgreSQL database support, containerized with Docke
 ## Prerequisites
 
 - Docker and Docker Compose
+- [just](https://github.com/casey/just) command runner (e.g. `uv tool install rust-just`)
 - Python 3.12+ (for local development)
 
 ## Setup
@@ -21,7 +22,7 @@ A FastAPI application with PostgreSQL database support, containerized with Docke
 
 ```bash
 # Start services
-docker compose up -d
+just run
 
 # Create migration
 docker compose exec app uv run alembic revision --autogenerate -m "Description"
@@ -29,6 +30,8 @@ docker compose exec app uv run alembic revision --autogenerate -m "Description"
 # Run migrations
 docker compose exec app uv run alembic upgrade head
 ```
+
+Run `just` without arguments to see all available commands (build, up, stop, down, test, migrations).
 
 ### Local Development
 
@@ -39,10 +42,10 @@ uv sync
 # Start PostgreSQL locally
 
 # Create migration
-uv run alembic revision --autogenerate -m "Description"
+just create-migration "Description"
 
 # Run migrations
-uv run alembic upgrade head
+just migrate
 
 # Start development server
 uv run fastapi run app/main.py --reload
