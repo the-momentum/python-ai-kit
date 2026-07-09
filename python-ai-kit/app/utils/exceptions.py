@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from functools import singledispatch, wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Concatenate
 from uuid import UUID
 
 from fastapi.exceptions import HTTPException, RequestValidationError
@@ -55,7 +55,9 @@ def _(exc: RequestValidationError, _: str) -> HTTPException:
     )
 
 
-def handle_exceptions[**P, T, Service: AppService](func: Callable[P, T]) -> Callable[P, T]:
+def handle_exceptions[**P, T, Service: AppService](
+    func: Callable[Concatenate[Service, P], T],
+) -> Callable[Concatenate[Service, P], T]:
     @wraps(func)
     def async_wrapper(instance: Service, *args: P.args, **kwargs: P.kwargs) -> T:
         try:

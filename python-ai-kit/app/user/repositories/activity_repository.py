@@ -11,5 +11,5 @@ class ActivityRepository:
             db_session.query(User)
             .filter(User.id == object_id)
             .filter(User.updated_at > datetime.now(timezone.utc) - timedelta(days=30))
-            .all()
-        )
+            .first()
+        ) is not None

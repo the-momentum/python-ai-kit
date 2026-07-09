@@ -19,10 +19,11 @@ def _generate_item_links(
     ]
     if extra_rels:
         for relation in extra_rels:
-            link = {}
-            link["rel"] = relation.get("rel")
-            link["href"] = built_url + relation.get("endpoint", "")
-            link["method"] = relation.get("method")
+            link = {
+                "rel": relation.get("rel", ""),
+                "href": built_url + relation.get("endpoint", ""),
+                "method": relation.get("method", "GET"),
+            }
             links.append(link)
             if overwrite := relation.get("overwrite"):
                 links = [lnk for lnk in links if lnk.get("rel") != overwrite]

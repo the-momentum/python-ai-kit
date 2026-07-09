@@ -44,7 +44,7 @@ manager = await WorkflowAgentFactory.create_manager()
 
 # Run workflow
 result = await user_assistant_graph.run(
-    start_node=StartNode(),
+    inputs=StartNode(),
     state=WorkflowState(),
     deps=manager.to_deps(
         message="Hello, how are you?",
@@ -52,7 +52,7 @@ result = await user_assistant_graph.run(
     )
 )
 
-print(result.output)
+print(result)
 ```
 
 ## 🔧 Building Custom Solutions
@@ -133,16 +133,24 @@ Build workflows using your custom nodes:
 
 ```python
 # app/agent/workflows/my_custom_workflow.py
-from pydantic_graph import Graph
+from pydantic_graph import GraphBuilder
 
+from app.agent.workflows.generation_events import WorkflowState
 from app.agent.workflows.nodes import StartNode, ClassifyNode
 from app.agent.workflows.nodes.my_custom_node import MyCustomNode
 from app.agent.workflows.nodes.guardrails import GuardrailsNode
 
-my_custom_workflow = Graph(
-    nodes=(StartNode, ClassifyNode, MyCustomNode, GuardrailsNode),
-    name="MyCustomWorkflow"
+builder = GraphBuilder(
+    name="MyCustomWorkflow",
+    state_type=WorkflowState,
+    deps_type=dict,
+    output_type=str,
 )
+builder.add(builder.edge_from(builder.start_node).to(StartNode))
+for node in (StartNode, ClassifyNode, MyCustomNode, GuardrailsNode):
+    builder.add(builder.node(node))
+
+my_custom_workflow = builder.build()
 ```
 
 ### 4. Creating Custom Factories
@@ -186,7 +194,7 @@ async def main():
     
     # Run your custom workflow
     result = await my_custom_workflow.run(
-        start_node=StartNode(),
+        inputs=StartNode(),
         state=WorkflowState(),
         deps=manager.to_deps(
             message="Process this with my custom agent",
@@ -195,7 +203,7 @@ async def main():
         )
     )
     
-    print(result.output)
+    print(result)
 ```
 
 ## 📚 Available Building Blocks

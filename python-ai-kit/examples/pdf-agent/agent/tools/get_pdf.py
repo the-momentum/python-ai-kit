@@ -2,10 +2,11 @@ import os
 from pathlib import Path
 from typing import Any
 
+import pypdf  # ty: ignore[unresolved-import]
 from dotenv import load_dotenv
-import pypdf
 
-def get_pdf_path() -> Path | str:
+
+def get_pdf_path() -> str | None:
     load_dotenv()
     return os.getenv("PDF_PATH")
 

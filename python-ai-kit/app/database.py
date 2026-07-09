@@ -30,9 +30,9 @@ def _prepare_sessionmaker(engine: Engine) -> sessionmaker:
 
 
 class BaseDbModel(DeclarativeBase, metaclass=AutoRelMeta):
-    @declared_attr
-    def __tablename__(self) -> str:
-        return self.__name__.lower()
+    @declared_attr.directive
+    def __tablename__(cls) -> str:  # noqa: N805
+        return cls.__name__.lower()
 
     @property
     def id_str(self) -> str:
