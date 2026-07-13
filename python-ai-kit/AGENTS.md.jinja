@@ -1,0 +1,773 @@
+# {{ project_name }}
+
+{% if project_description %}
+{{ project_description }}
+
+{% endif %}
+Scaffolded from [`python-ai-kit`](https://github.com/the-momentum/python-ai-kit) ({{ project_type }} variant). This file is the source of truth for AI coding agents working in this repository. When this file and the code disagree, trust the code — and fix this file in the same change.
+
+---
+
+## Non-negotiables
+
+Read these before touching anything. They override every other section.
+
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+- **Never hand-author Alembic migrations.** Change the model → `just create-migration "..."` → review the generated file → commit. Never write a migration from scratch. If a generated migration needs tweaks (backfill, partial unique index), edit it — don't replace it.
+- **Never run `just migrate` / `just downgrade` without user approval.** Migrations touch shared DB state. Generate, show, wait, apply.
+{% endif %}
+- **Ship nothing without the quality gate:**
+  ```bash
+  uv run pre-commit run --all-files
+  uv run ruff check . --fix && uv run ruff format .
+  uv run ty check .
+  uv run pytest -v --cov=app
+  ```
+  Fix every failure. No `--no-verify`. No skipped hooks.
+- **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys{% if project_type in ["api-monolith", "api-microservice", "agent"] %}, DB credentials{% endif %} — scan the diff every time. Only `config/.env.example` belongs in git.
+- **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
+{% if project_type in ["api-monolith", "api-microservice"] %}
+- **Respect layer boundaries.** Routes → services → repositories. Services own business logic and error translation. Repositories do DB I/O only. See [Layer contracts](#layer-contracts).
+{% elif project_type == "agent" %}
+- **Keep the workflow layered.** Routes stay thin; orchestration lives in graph nodes (`app/agent/workflows/`); LLM interaction lives in engines (`app/agent/engines/`); prompts live in `app/agent/prompts/` — never inline prompt strings in nodes or routes.
+{% else %}
+- **Keep tools modular.** One `FastMCP` sub-router per tool domain in `app/mcp/tools/`, mounted in `app/mcp/mcp.py`. No business logic in `app/main.py`.
+{% endif %}
+- **Test before declaring done.** Unit tests for {% if project_type in ["api-monolith", "api-microservice"] %}services, integration tests for repos/routes{% elif project_type == "agent" %}engines/nodes/tools, integration tests for routes{% else %}tool functions{% endif %}. "It compiles" is not done.
+
+> Note: the scaffold ships **no tests** — create the `tests/` directory with your first change. Pytest (`pytest`, `pytest-asyncio`, `pytest-cov`) is already in the `dev` dependency group.
+
+---
+
+## Task playbooks
+
+Before writing code, map the task to one of these flows. If the task doesn't fit any of them, stop and ask.
+
+{% if project_type == "api-microservice" %}
+### Add a new endpoint
+1. Schema in `app/schemas/<resource>.py` — `Read` / `Create` / `Update` variants (see `app/schemas/user.py`), re-exported from `app/schemas/__init__.py`.
+2. Route in `app/api/routes/v1/<resource>.py` — `async def`, `response_model`, `status_code` (use `fastapi.status`), path in kebab-case, no trailing slash on the prefixed router's root (`""`, not `"/"`).
+3. Register the module router on `head_router` in `app/api/__init__.py` with a prefix and tag.
+4. Delegate to a service — never touch the DB from a route. Inject the session via the `DbSession` annotated type from `app/database.py`.
+5. Tests: integration test hitting the route, unit test for the service method.
+
+### Add a new model
+1. Model in `app/models/<name>.py` using `BaseDbModel` and `Mapped[...]` types from `app/mappings.py` (see `app/models/user.py`).
+2. Update `app/models/__init__.py` exports.
+3. Schemas for I/O shapes (see above).
+4. Repository in `app/repositories/<name>.py` extending `CrudRepository[Model, CreateSchema, UpdateSchema]` if you need queries beyond CRUD.
+5. **Autogenerate migration** — `just create-migration "Add <thing>"`. Review it. Ask before applying.
+6. Reflect any new constraint/index in `__table_args__` to keep ORM and DB in sync.
+
+### Add a new service
+1. `app/services/<name>.py` extending `AppService[Repo, Model, CreateSchema, UpdateSchema]` (base class: `app/services/services.py`).
+2. Business logic only — repositories do the DB work.
+3. Wrap methods that can raise domain/DB errors with `@handle_exceptions` (from `app/utils/exceptions.py`).
+4. Expose via `app/services/__init__.py`.
+
+### Change a schema / model field
+1. Update model + schemas.
+2. Autogenerate migration and review.
+3. Grep call sites — a field rename breaks everything downstream silently if you miss one.
+4. Run the full quality gate.
+{% elif project_type == "api-monolith" %}
+### Add a new feature module
+1. Create a package `app/<feature>/` mirroring `app/user/`: `models.py`, `schemas.py`, `routes/v1/`, `services/`, `repositories/`.
+2. Repository extends `CrudRepository[Model, CreateSchema, UpdateSchema]` (base class: `app/repositories.py`).
+3. Service extends `AppService[Repo, Model, CreateSchema, UpdateSchema]` (base class: `app/services.py`); expose it from `app/<feature>/services/__init__.py`.
+4. Register the feature router on `head_router` in `app/api.py` with a prefix and tag.
+5. **Autogenerate migration** — `just create-migration "Add <thing>"`. Review it. Ask before applying.
+6. Tests: integration test hitting the route, unit test for the service.
+
+### Add a new endpoint to an existing module
+1. Schema variants in `app/<feature>/schemas.py`.
+2. Route in `app/<feature>/routes/v1/` — `async def`, `response_model`, `status_code` (use `fastapi.status`), path in kebab-case, no trailing slash on the prefixed router's root (`""`, not `"/"`).
+3. Delegate to the module's service — never touch the DB from a route. Inject the session via the `DbSession` annotated type from `app/database.py`.
+4. Tests for route + service.
+
+### Add a new model
+1. Model in `app/<feature>/models.py` using `BaseDbModel` and `Mapped[...]` types from `app/mappings.py` (see `app/user/models.py`).
+2. Schemas for I/O shapes in `app/<feature>/schemas.py`.
+3. **Autogenerate migration** — `just create-migration "Add <thing>"`. Review it. Ask before applying.
+4. Reflect any new constraint/index in `__table_args__` to keep ORM and DB in sync.
+
+### Change a schema / model field
+1. Update model + schemas.
+2. Autogenerate migration and review.
+3. Grep call sites — a field rename breaks everything downstream silently if you miss one.
+4. Run the full quality gate.
+{% elif project_type == "agent" %}
+### Add a new agent / worker
+1. Engine in `app/agent/engines/<name>.py`: a deps dataclass extending `BaseAgentDeps` + a class extending `BaseAgent` (see `app/agent/engines/react_agent.py`, `routers.py`, `guardrails.py`, `translators.py`).
+2. Instructions in `app/agent/prompts/` — never inline prompt strings in the engine.
+3. Register it in `WorkflowAgentFactory.create_manager` (`app/agent/factories/workflow_factory.py`) so it lands in the `AgentManager`.
+4. Unit test the engine with a mocked model.
+
+### Add a workflow node
+1. Node in `app/agent/workflows/nodes/<name>.py` extending `pydantic_graph.BaseNode` (see existing nodes: `base.py`, `routing.py`, `generation.py`, `guardrails.py`).
+2. Export it from `app/agent/workflows/nodes/__init__.py`.
+3. Wire it into the graph in `app/agent/workflows/agent_workflow.py`; extend `WorkflowState` in `generation_events.py` if the node needs new state fields.
+4. Unit test the node's `run` with a stubbed `GraphRunContext`.
+
+### Add a tool
+1. Tool functions in `app/agent/tools/<name>.py`, grouped in a `<NAME>_TOOLS` list (see `dateutils.py`).
+2. Register a toolpack in `app/agent/tools/tool_registry.py` (`Toolpacks` enum + `ToolManager`).
+3. Attach to the agent that needs it.
+
+### Build a new standalone agent workflow
+Use `examples/pdf-agent/` as the worked reference — it shows the full extension pattern: own engine, factory, tools, nodes, and entrypoint.
+
+### Add a new endpoint
+1. Schema in `app/schemas/<resource>.py`.
+2. Route in `app/api/routes/v1/<resource>.py` (see `chat.py` — wrap long-running agent calls in `asyncio.wait_for(..., timeout=settings.timeout)`).
+3. Register the router on `head_router` in `app/api/__init__.py` with a prefix and tag.
+
+### Add a new model
+1. Model in `app/models/<name>.py` using `BaseDbModel` and `Mapped[...]` types from `app/mappings.py`.
+2. Update `app/models/__init__.py` exports; add schemas.
+3. **Autogenerate migration** — `just create-migration "Add <thing>"`. Review it. Ask before applying.
+{% elif project_type == "mcp-server" %}
+### Add a tool
+1. Create `app/mcp/tools/<domain>.py` with its own sub-router: `<domain>_router = FastMCP(name="<Domain> MCP")` and `@<domain>_router.tool`-decorated functions (see `app/mcp/tools/hello.py`).
+2. Mount it in `app/mcp/mcp.py`: `mcp_router.mount(<domain>.<domain>_router)`.
+3. Type-hint every tool parameter and the return value — FastMCP derives the tool schema from them. Write docstrings; they become the tool descriptions the LLM sees.
+4. Unit test the tool function directly.
+
+### Add configuration
+1. Add the field to `Settings` in `app/config.py`; read values from `config/.env`.
+2. Document it in `config/.env.example`.
+3. For secrets, prefer Fernet-encrypted values via `MASTER_KEY` (`app/utils/config_utils.py`, helper scripts in `scripts/cryptography/`).
+{% endif %}
+{% if "celery" in plugins %}
+
+### Add a Celery task
+1. Task in `app/integrations/celery/tasks/<name>.py` as a `@shared_task` (see `dummy_task.py`); tasks are autodiscovered from `app.integrations.celery`.
+2. Export it from `app/integrations/celery/tasks/__init__.py`.
+3. Periodic tasks: add an entry to `beat_schedule` in `app/integrations/celery/core.py`.
+4. The Celery app instance is `celery_app` in `app/main.py` (created by `create_celery()`); worker/beat/flower start scripts live in `scripts/start/`.
+{% endif %}
+
+---
+
+## Architecture
+
+{% if project_type == "api-microservice" %}
+```
+Request → main.py → head_router (app/api/__init__.py) → module router → endpoint
+                                                                            ↓
+                                                                         service   ← business logic, error translation
+                                                                            ↓
+                                                                        repository ← DB I/O only, SQLAlchemy in/out
+                                                                            ↓
+                                                                        PostgreSQL
+```
+
+```
+app/
+├── api/routes/v1/    # One file per resource. Thin. Delegates to services.
+├── models/           # SQLAlchemy models (one table per model).
+├── schemas/          # Pydantic 2 models. Read/Create/Update variants.
+├── services/         # Business logic. AppService base in services.py.
+├── repositories/     # DB I/O only. CrudRepository base in repositories.py.
+├── integrations/     # Plugin integrations{% if plugins %} ({{ plugins | join(", ") }}){% endif %}.
+├── utils/            # exceptions.py, config_utils.py, mappings_meta.py.
+├── database.py       # BaseDbModel, DbSession (annotated session dependency).
+├── mappings.py       # Custom Annotated SQLAlchemy types.
+├── middlewares.py    # CORS.
+├── main.py           # App assembly.
+└── config.py         # Settings (reads config/.env).
+migrations/           # Alembic migrations (autogenerated — never hand-author).
+```
+{% elif project_type == "api-monolith" %}
+```
+Request → main.py → head_router (app/api.py) → feature router → endpoint
+                                                                    ↓
+                                                                 service   ← business logic, error translation
+                                                                    ↓
+                                                                repository ← DB I/O only, SQLAlchemy in/out
+                                                                    ↓
+                                                                PostgreSQL
+```
+
+```
+app/
+├── user/             # Feature module — the pattern to copy for new features:
+│   ├── models.py     #   SQLAlchemy models.
+│   ├── schemas.py    #   Pydantic 2 Read/Create/Update variants.
+│   ├── routes/v1/    #   Thin routes. Delegate to services.
+│   ├── services/     #   Business logic.
+│   └── repositories/ #   DB I/O only.
+├── integrations/     # Plugin integrations{% if plugins %} ({{ plugins | join(", ") }}){% endif %}.
+├── utils/            # exceptions.py, api_utils.py (HATEOAS), healthcheck.py, ...
+├── api.py            # head_router: mounts /health and feature routers.
+├── services.py       # AppService base class.
+├── repositories.py   # CrudRepository base class.
+├── database.py       # BaseDbModel, DbSession (annotated session dependency).
+├── mappings.py       # Custom Annotated SQLAlchemy types.
+├── middlewares.py    # CORS.
+├── main.py           # App assembly.
+└── config.py         # Settings (reads config/.env).
+migrations/           # Alembic migrations (autogenerated — never hand-author).
+```
+{% elif project_type == "agent" %}
+```
+POST /chat → app/api/routes/v1/chat.py → user_assistant_graph.run(...)
+                                              │  (pydantic-graph)
+              StartNode → ClassifyNode ─┬→ GenerateNode ─┐
+                                        ├→ TranslateNode ─┤→ GuardrailsNode → End
+                                        └→ RefuseNode ────┘
+                                              │
+                        engines (BaseAgent wrappers over pydantic-ai Agents)
+                        registered in AgentManager via WorkflowAgentFactory
+```
+
+```
+app/
+├── agent/
+│   ├── engines/        # BaseAgent + concrete agents (react, router, guardrails, translator).
+│   ├── workflows/      # agent_workflow.py (graph), generation_events.py (state), nodes/.
+│   ├── factories/      # WorkflowAgentFactory — builds and registers agents.
+│   ├── tools/          # Tool functions + tool_registry (Toolpacks, ToolManager).
+│   ├── prompts/        # All prompt/instruction text lives here.
+│   ├── static/         # Canned messages (errors, refusals) per language.
+│   └── agent_manager.py  # AgentManager registry.
+├── api/routes/v1/      # chat.py — the HTTP entrypoint.
+├── models/ · schemas/  # SQLAlchemy models + Pydantic schemas.
+├── integrations/       # Plugin integrations{% if plugins %} ({{ plugins | join(", ") }}){% endif %}.
+├── utils/              # llm_vendor.py, date_handlers.py, config_utils.py.
+├── database.py         # BaseDbModel, DbSession.
+├── mappings.py         # Custom Annotated SQLAlchemy types.
+├── gui.py              # Streamlit chat UI.
+├── main.py             # App assembly.
+└── config.py           # Settings (reads config/.env: API_KEY, AI_PROVIDER, MODEL, MCP_URLS, ...).
+migrations/             # Alembic migrations (autogenerated — never hand-author).
+examples/pdf-agent/     # Worked example of a custom agent workflow.
+```
+{% elif project_type == "mcp-server" %}
+```
+app/main.py: mcp = FastMCP(settings.mcp_server_name)
+                └── mounts app/mcp/mcp.py: mcp_router
+                                └── mounts one FastMCP sub-router per tool domain
+                                    (app/mcp/tools/*.py, e.g. hello.py)
+```
+
+```
+app/
+├── mcp/
+│   ├── mcp.py        # mcp_router — mounts all tool sub-routers.
+│   └── tools/        # One file per tool domain, each with its own FastMCP sub-router.
+├── utils/            # config_utils.py (encrypted settings support).
+├── main.py           # FastMCP server entrypoint.
+└── config.py         # Settings (reads config/.env).
+```
+{% endif %}
+{% if project_type in ["api-monolith", "api-microservice"] %}
+
+### <a id="layer-contracts"></a>Layer contracts
+
+| Layer | Can | Must not |
+|-------|-----|----------|
+| Routes | Validate input, call services, return Pydantic | Access DB, hold business logic |
+| Services | Business logic, call repos, call other services, translate errors | Build queries directly, leak raw DB exceptions |
+| Repositories | Build queries, return SQLAlchemy models | Return Pydantic, depend on services |
+| Models | Define tables, relationships, `__table_args__` | Hold validation — that's schemas |
+| Schemas | Validate, serialize, set defaults | Hold persistence logic |
+
+**Cross-module rule:** if module A needs data from module B, call B's **service**, not B's repository.
+{% endif %}
+
+---
+
+## Code patterns
+
+Model new code on the canonical files below — they are the reference implementation of each layer. Don't copy patterns from other projects. If these files have been removed or reworked, model on the closest existing module instead.
+
+{% if project_type == "api-microservice" %}
+| Pattern | Canonical file |
+|---------|----------------|
+| Service base class | `app/services/services.py` (`AppService`) |
+| Repository base class | `app/repositories/repositories.py` (`CrudRepository`) |
+| Model | `app/models/user.py` |
+| Schemas (Read/Create/Update) | `app/schemas/user.py` |
+| Schema exports | `app/schemas/__init__.py` |
+| Custom column types | `app/mappings.py` (`PrimaryKey`, `Unique`, `UniqueIndex`, `Indexed`, `str_10/50/100/255`, `email`, `numeric_*`, `datetime_tz`, `OneToMany`, `ManyToOne`, `FKUser`) |
+| Session dependency | `app/database.py` (`DbSession` — annotated FastAPI dependency) |
+| Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
+
+The scaffold ships `app/api/routes/v1/user.py`, `app/services/user.py` and `app/repositories/user.py` as **empty stubs** — they mark where each layer lives but contain no example code. When implementing them (or any new resource), follow this shape:
+
+```python
+# app/repositories/<resource>.py
+from app.models import Thing
+from app.repositories.repositories import CrudRepository
+from app.schemas import ThingCreate, ThingUpdate
+
+class ThingRepository(CrudRepository[Thing, ThingCreate, ThingUpdate]): ...
+
+# app/services/<resource>.py
+from logging import getLogger
+from app.models import Thing
+from app.repositories.thing import ThingRepository
+from app.services.services import AppService
+
+class ThingService(AppService[ThingRepository, Thing, ThingCreate, ThingUpdate]): ...
+
+thing_service = ThingService(ThingRepository, Thing, getLogger(__name__))
+
+# app/api/routes/v1/<resource>.py
+from fastapi import APIRouter, status
+from app.database import DbSession
+from app.schemas import ThingCreate, ThingRead
+from app.services.thing import thing_service
+
+router = APIRouter()
+
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=ThingRead)
+async def create_thing(payload: ThingCreate, db: DbSession):
+    return thing_service.create(db, payload)
+```
+
+Then mount `router` on `head_router` in `app/api/__init__.py` with a prefix and tag.
+{% elif project_type == "api-monolith" %}
+| Pattern | Canonical file |
+|---------|----------------|
+| Feature module layout | `app/user/` (copy this structure for new features) |
+| Service base class | `app/services.py` (`AppService`) |
+| Repository base class | `app/repositories.py` (`CrudRepository`) |
+| Model | `app/user/models.py` |
+| Schemas (Read/Create/Update) | `app/user/schemas.py` |
+| Full CRUD routes | `app/user/routes/v1/user_crud.py` |
+| Service + module singleton | `app/user/services/services.py` (`user_service = UserService(...)`) |
+| Service mixin | `app/user/services/activity_mixin.py` |
+| HATEOAS responses | `app/utils/api_utils.py` (`format_response`), `app/utils/hateoas.py` |
+| Custom column types | `app/mappings.py` (`PrimaryKey`, `Unique`, `UniqueIndex`, `Indexed`, `str_10/50/100/255`, `email`, `numeric_*`, `datetime_tz`, `OneToMany`, `ManyToOne`, `FKUser`) |
+| Session dependency | `app/database.py` (`DbSession` — annotated FastAPI dependency) |
+| Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
+| Router registration | `app/api.py` (`head_router`) |
+
+Services are exposed as module-level singletons (`user_service`) and imported directly by routes — follow that pattern for new modules.
+{% elif project_type == "agent" %}
+| Pattern | Canonical file |
+|---------|----------------|
+| Agent base + deps | `app/agent/engines/agent_base.py` (`BaseAgent`, `BaseAgentDeps`) |
+| Reasoning agent | `app/agent/engines/react_agent.py` |
+| Router (classification) agent | `app/agent/engines/routers.py` (`GenericRouter`, structured `RoutingResponse`) |
+| Guardrails / translator workers | `app/agent/engines/guardrails.py`, `app/agent/engines/translators.py` |
+| Graph definition | `app/agent/workflows/agent_workflow.py` (`user_assistant_graph`) |
+| Graph nodes | `app/agent/workflows/nodes/` |
+| Workflow state | `app/agent/workflows/generation_events.py` (`WorkflowState`) |
+| Agent registry | `app/agent/agent_manager.py` (`AgentManager`) |
+| Factory wiring | `app/agent/factories/workflow_factory.py` (`WorkflowAgentFactory`) |
+| Tools + registry | `app/agent/tools/dateutils.py`, `app/agent/tools/tool_registry.py` |
+| Prompts | `app/agent/prompts/agent_prompts.py`, `worker_prompts.py` |
+| Canned messages per language | `app/agent/static/default_msgs.py` |
+| HTTP entrypoint | `app/api/routes/v1/chat.py` |
+| Full custom-workflow example | `examples/pdf-agent/` |
+| Model / column types / session | `app/models/`, `app/mappings.py`, `app/database.py` (`DbSession`) |
+{% elif project_type == "mcp-server" %}
+| Pattern | Canonical file |
+|---------|----------------|
+| Tool sub-router | `app/mcp/tools/hello.py` (`FastMCP` sub-router + `@hello_router.tool`) |
+| Router assembly | `app/mcp/mcp.py` (`mcp_router.mount(...)`) |
+| Server entrypoint | `app/main.py` |
+| Settings | `app/config.py` |
+| Encrypted settings | `app/utils/config_utils.py` + `scripts/cryptography/` |
+{% endif %}
+{% if project_type in ["api-monolith", "api-microservice"] %}
+
+---
+
+## Error handling
+
+All error machinery lives in `app/utils/exceptions.py`:
+
+- **`handle_exception(exc, entity)`** — a `@singledispatch` translator registered for SQLAlchemy/psycopg `IntegrityError` (→ 400), `ResourceNotFoundError` (→ 404), `AttributeError` (→ 400) and `RequestValidationError` (→ 400). `app/main.py` wires it as the global `RequestValidationError` handler.
+- **`@handle_exceptions`** — decorator for service methods; catches known exceptions and routes them through `handle_exception`. The `AppService` base already applies it to `create` / `get` / `get_all` — apply it to new service methods that touch the DB or integrations.
+- **`ResourceNotFoundError`** — raise for missing domain objects, or use the built-in flag: `service.get(db, id, raise_404=True)`.
+
+Rules:
+
+- Let exceptions propagate to the handlers — don't wrap route bodies in try/except.
+- Never leak raw `sqlalchemy.exc` errors past the service boundary; extend `handle_exception` with a new `@register` instead.
+- Don't silently swallow exceptions in background work — log with context and re-raise or translate.
+{% if "sentry" in plugins %}
+- Sentry is initialized in `app/main.py` via `init_sentry()` (`app/integrations/sentry.py`), gated by `SENTRY_ENABLED`. Unhandled exceptions reach Sentry automatically; if you catch-and-continue (batch loops, task error returns), call `sentry_sdk.capture_exception(e)` alongside the log, or the error is invisible to monitoring.
+{% endif %}
+{% endif %}
+
+---
+
+## Conventions
+
+### Style
+- Line length 120. Ruff (lint + format + import sorting) and `ty` for type checks — both run via pre-commit.
+- PEP 604 unions (`str | None`). Type hints on everything (ruff `ANN` rules enforce this).
+- All imports at module level. **Never inside functions.**
+- `__all__` lists sorted alphabetically.
+- Import from package `__init__` when a symbol is re-exported there, not from the submodule path.
+- If a submodule symbol should be public API, promote it to `__init__` + `__all__` first.
+
+### Naming
+- Files/modules: `snake_case`.
+- Classes: `PascalCase`.
+- Functions/vars: `snake_case`.
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+- URL paths: `kebab-case` (`/call-schedules`, not `/call_schedules`).
+- Route tags: singular, kebab-case.
+{% endif %}
+
+### Configuration
+- All settings live in `Settings` (`app/config.py`), loaded from `config/.env`. Never read `os.environ` directly in feature code.
+- New setting → add the field to `Settings` **and** document it in `config/.env.example`.
+- Secrets can be Fernet-encrypted with `MASTER_KEY` (`app/utils/config_utils.py`; helper scripts in `scripts/cryptography/`).
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+
+### Data integrity
+- Business uniqueness at the DB level (unique constraints/indexes), not only app-level pre-checks.
+- Nullable unique identifiers → PostgreSQL partial unique index (`... WHERE field IS NOT NULL`).
+- Keep `__table_args__` in sync with migrations.
+- Relationships: annotate with `OneToMany[...]` / `ManyToOne[...]` from `app/mappings.py` — the `AutoRelMeta` metaclass generates the SQLAlchemy `relationship()` and back-populates automatically.
+{% endif %}
+
+### Dependencies
+- `uv add <pkg>` — auto-updates `pyproject.toml`, lockfile and venv. Never edit the lockfile by hand.
+- Dev tooling goes to the right group: `code-quality` (lint/type) or `dev` (test).
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+
+---
+
+## Migrations
+
+**Rule:** every migration comes from autogenerate, nothing hand-written from scratch.
+
+```bash
+# 1. Change models
+# 2. Autogenerate
+just create-migration "Add <thing>"
+# 3. Review migrations/versions/<new>.py:
+#    - create_index / add_column / drop_column
+#    - nullable / server_default
+#    - partial unique WHERE clauses
+#    - data backfills (autogenerate does NOT emit these)
+# 4. Ask user, then apply
+just migrate
+# Rollback (also requires approval)
+just downgrade
+```
+
+Autogenerate does not emit: data backfills, partial unique indexes, or safe non-blocking DDL for large tables. Add those ops by hand **to the generated file** when needed.
+
+Never delete migration files that have been applied to shared environments.
+{% endif %}
+
+---
+
+## Verifying changes
+
+### Quality gate (run every time before reporting done)
+```bash
+uv run pre-commit run --all-files
+uv run ruff check . --fix && uv run ruff format .
+uv run ty check .
+uv run pytest -v --cov=app
+```
+
+{% if project_type in ["api-monolith", "api-microservice"] %}
+### Run the app
+```bash
+just run           # docker compose, detached (just up for foreground)
+just stop          # stop containers
+```
+Routes are mounted under the API prefix from `settings.api_latest` — check the exact paths in Swagger at http://localhost:8000/docs.
+
+### API
+```bash
+curl http://localhost:8000/docs                # Swagger UI
+curl -X POST http://localhost:8000/<prefix>/<resource> -H "Content-Type: application/json" -d '{"key":"value"}'
+```
+
+### Database
+```bash
+docker exec -it postgres__{{ project_name }} psql -U {{ project_name }} -d {{ project_name }}   # DB user/name are seeded from the project name; see config/.env
+# \dt   SELECT * FROM <table> LIMIT 5;
+```
+
+### Logs
+```bash
+docker compose logs -f app
+{% if "celery" in plugins %}
+docker compose logs -f celery-worker
+{% endif %}
+```
+{% elif project_type == "agent" %}
+### Run the app
+```bash
+uv run fastapi dev app/main.py       # API on http://localhost:8000 (Swagger: /docs)
+uv run streamlit run app/gui.py      # Streamlit chat UI
+```
+Requires `config/.env` with at least `API_KEY` (see `config/.env.example`). Exercise a change end-to-end through the chat endpoint or the GUI — a passing type check says nothing about prompt/graph behavior.
+{% elif project_type == "mcp-server" %}
+### Run the server
+```bash
+uv run fastmcp run app/main.py                             # stdio transport (default)
+uv run fastmcp run app/main.py --transport http --port 8888
+```
+Verify a new tool by listing tools and invoking it through an MCP client (e.g. the MCP inspector), not just by importing the module.
+{% endif %}
+
+---
+
+## Reference
+
+### justfile
+
+| Command | Description |
+|---------|-------------|
+{% if project_type in ["api-monolith", "api-microservice"] %}
+| `just build` | Build Docker images |
+| `just run` / `just up` | Start detached / foreground |
+| `just stop` / `just down` | Stop / remove containers |
+{% endif %}
+| `just test` | Run pytest with coverage |
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+| `just create-migration "..."` | Autogenerate Alembic migration |
+| `just migrate` / `just downgrade` | Apply / revert (requires approval) |
+{% endif %}
+{% if project_type in ["api-monolith", "api-microservice"] %}
+
+### Access points
+- API: http://localhost:8000
+- Swagger: http://localhost:8000/docs
+{% if project_type == "api-monolith" %}
+- Healthcheck: `/health/db` (under the API prefix)
+{% endif %}
+{% if "celery" in plugins %}
+- Flower (Celery monitoring): http://localhost:5555
+{% endif %}
+{% elif project_type == "agent" %}
+
+### Access points
+- API: http://localhost:8000 (Swagger: /docs)
+- Streamlit GUI: `uv run streamlit run app/gui.py`
+{% if "celery" in plugins %}
+- Flower (Celery monitoring): start it via `scripts/start/flower.sh`, then http://localhost:5555
+{% endif %}
+{% endif %}
+
+### Tech stack
+{% if project_type in ["api-monolith", "api-microservice"] %}
+Python {{ default_python_version }} · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Alembic · Pydantic 2{% if "celery" in plugins %} · Celery + Redis{% endif %}{% if "sqladmin" in plugins %} · SQLAdmin{% endif %}{% if "sentry" in plugins %} · Sentry{% endif %} · Ruff · `ty` · `uv`
+{% elif project_type == "agent" %}
+Python {{ default_python_version }} · Pydantic AI · pydantic-graph · FastAPI · Streamlit · SQLAlchemy 2.0 · PostgreSQL · Alembic{% if "celery" in plugins %} · Celery + Redis{% endif %}{% if "sqladmin" in plugins %} · SQLAdmin{% endif %}{% if "sentry" in plugins %} · Sentry{% endif %} · Ruff · `ty` · `uv`
+{% elif project_type == "mcp-server" %}
+Python {{ default_python_version }} · FastMCP · Pydantic 2 · Ruff · `ty` · `uv`
+{% endif %}
+
+---
+
+## Quick checklists
+
+These are pointed reminders for the moment you're doing the thing. They repeat rules stated above on purpose — recall at the point of action matters more than terseness.
+
+{% if project_type in ["api-monolith", "api-microservice"] %}
+### New route
+- [ ] `async def` handler.
+- [ ] `response_model` + `status_code` (use `fastapi.status`).
+- [ ] Path in kebab-case. No trailing slash on the prefixed router's root (`""`, not `"/"`).
+- [ ] Route does nothing but validate + call service + return.
+{% if project_type == "api-microservice" %}
+- [ ] Router mounted on `head_router` in `app/api/__init__.py` with prefix and tag.
+{% else %}
+- [ ] Router mounted on `head_router` in `app/api.py` with prefix and tag.
+{% endif %}
+
+### New service
+- [ ] Extends `AppService[Repo, Model, CreateSchema, UpdateSchema]`.
+- [ ] Public methods first, `_private` helpers at the end.
+- [ ] No direct query building — that's the repository's job.
+- [ ] DB-touching methods wrapped with `@handle_exceptions`.
+- [ ] No repository from another module injected. Call the other module's **service**.
+{% if project_type == "api-microservice" %}
+- [ ] Exported from `app/services/__init__.py`.
+{% else %}
+- [ ] Exported from `app/<feature>/services/__init__.py`.
+{% endif %}
+
+### New model / schema change
+- [ ] Model extends `BaseDbModel`, uses `Mapped[...]` types from `app/mappings.py`.
+- [ ] Read/Create/Update schemas present, defaults on the schema.
+- [ ] New constraint/index reflected in `__table_args__`.
+- [ ] `just create-migration "..."` run. Generated migration reviewed for: backfills, partial unique indexes, nullable flags, server defaults.
+- [ ] **Did not** hand-author a migration file.
+- [ ] **Did not** run `just migrate` without user approval.
+{% elif project_type == "agent" %}
+### New agent / worker
+- [ ] Deps dataclass extends `BaseAgentDeps`; class extends `BaseAgent`.
+- [ ] Instructions live in `app/agent/prompts/` — no inline prompt strings.
+- [ ] Registered in `WorkflowAgentFactory.create_manager`.
+- [ ] Unit test with a mocked model.
+
+### New workflow node
+- [ ] Extends `pydantic_graph.BaseNode`; exported from `nodes/__init__.py`.
+- [ ] Wired into the graph in `agent_workflow.py`.
+- [ ] New state fields added to `WorkflowState` in `generation_events.py`, not smuggled through deps.
+- [ ] User-facing fallback texts added per language in `app/agent/static/default_msgs.py` if the node can fail/refuse.
+
+### New model / schema change
+- [ ] Model extends `BaseDbModel`, uses `Mapped[...]` types from `app/mappings.py`; exported from `app/models/__init__.py`.
+- [ ] `just create-migration "..."` run and the generated migration reviewed.
+- [ ] **Did not** hand-author a migration file.
+- [ ] **Did not** run `just migrate` without user approval.
+{% elif project_type == "mcp-server" %}
+### New tool
+- [ ] Own `FastMCP` sub-router in `app/mcp/tools/<domain>.py`, mounted in `app/mcp/mcp.py`.
+- [ ] Every parameter and return value type-hinted; docstring written (it becomes the tool description).
+- [ ] New settings added to `Settings` + `config/.env.example`.
+- [ ] Verified through an MCP client, not just imported.
+{% endif %}
+{% if "celery" in plugins %}
+
+### Background tasks
+- [ ] Task is a `@shared_task` in `app/integrations/celery/tasks/`, exported from `tasks/__init__.py`.
+- [ ] Periodic schedule added to `beat_schedule` in `core.py` if needed.
+- [ ] Task is idempotent or guarded — Celery retries can re-run it.
+- [ ] Failures are logged with context, not silently swallowed.
+{% endif %}
+
+---
+
+## Before declaring done (pre-merge checklist)
+
+Stop here before saying "finished". Every item is a hard gate.
+
+1. [ ] `uv run pre-commit run --all-files` — green.
+2. [ ] `uv run ruff check . --fix && uv run ruff format .` — green.
+3. [ ] `uv run ty check .` — green.
+4. [ ] `uv run pytest -v --cov=app` — green. New code has tests.
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+5. [ ] Model changes? Migration autogenerated, reviewed, committed — **not** applied to shared DBs without explicit approval.
+6. [ ] Diff scanned for secrets (`config/.env`, API keys, tokens).
+7. [ ] No `--no-verify`, no skipped hooks, no bypassed signing.
+{% else %}
+5. [ ] Diff scanned for secrets (`config/.env`, API keys, tokens).
+6. [ ] No `--no-verify`, no skipped hooks, no bypassed signing.
+{% endif %}
+
+If any item fails: fix the cause, don't bypass the check.
+
+---
+
+## Extension patterns
+
+**None of the following has code in the scaffold yet.** These are the house patterns to follow when the need first arises — create the files from scratch as described.
+
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+### New third-party integration
+When you integrate an external system (payment provider, CRM, storage, LLM vendor API, ...):
+
+1. Create `app/integrations/<name>/client.py` — a typed client class owning all HTTP/SDK calls.
+2. Add its secrets/config to `Settings` in `app/config.py` + `config/.env.example`. Never hardcode.
+{% if project_type == "agent" %}
+3. Expose a provider function and inject the client where it's used (an engine, tool, or route) — never instantiate clients ad hoc:
+
+```python
+# app/integrations/<name>/dependencies.py
+def get_<name>_client() -> <Name>Client:
+    return <Name>Client(api_key=settings.<name>_api_key)
+
+# in a route, or wired into the engine/tool that needs it
+client: Annotated[<Name>Client, Depends(get_<name>_client)]
+```
+
+4. Keep business logic out of the client — it belongs in the engine/tool that uses it.
+
+### Provider strategy (multi-vendor integrations)
+If an integration spans multiple vendors of the same kind (image-gen providers, voice agents, LLM vendors, ...), don't `if vendor == ...` your way through engines. Define a strategy per vendor and select it by name:
+
+```python
+# app/agent/providers/base.py
+class BaseProviderStrategy(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
+
+# app/agent/providers/<vendor>/strategy.py
+class <Vendor>Strategy(BaseProviderStrategy):
+    @property
+    def name(self) -> str:
+        return "<vendor>"
+```
+{% else %}
+3. Expose a provider function and inject the client into services — never instantiate clients inside service methods:
+
+```python
+# app/integrations/<name>/dependencies.py
+def get_<name>_client() -> <Name>Client:
+    return <Name>Client(api_key=settings.<name>_api_key)
+
+# in a route/service signature
+client: Annotated[<Name>Client, Depends(get_<name>_client)]
+```
+
+4. Keep business logic out of the client — it belongs in services.
+
+### Provider strategy (multi-vendor integrations)
+If an integration spans multiple vendors of the same kind (image-gen providers, voice agents, LLM vendors, ...), don't `if vendor == ...` your way through services. Define a strategy per vendor and select it by name:
+
+```python
+# app/services/providers/base.py
+class BaseProviderStrategy(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
+
+# app/services/providers/<vendor>/strategy.py
+class <Vendor>Strategy(BaseProviderStrategy):
+    @property
+    def name(self) -> str:
+        return "<vendor>"
+```
+{% endif %}
+{% if project_type in ["api-monolith", "api-microservice"] %}
+
+### FastAPI DI providers instead of module singletons
+The scaffold wires services as module-level singletons. Once services grow real collaborators (integration clients, other services), switch to provider functions so tests can override them via `dependency_overrides`:
+
+```python
+# app/dependencies.py
+def get_thing_repository() -> ThingRepository:
+    return ThingRepository(Thing)
+
+def get_thing_service(
+    repo: Annotated[ThingRepository, Depends(get_thing_repository)],
+) -> ThingService:
+    return ThingService(repo, Thing, getLogger(__name__))
+```
+
+No `dep: Dep | None = None` constructor fallbacks — inject explicitly.
+{% endif %}
+{% if "celery" in plugins %}
+
+### Idempotent task enqueueing
+When a task must not run twice for the same subject (syncs, webhooks, payments), don't call `task.delay(...)` from many places. Create one queue entrypoint per operation that takes a Redis idempotency lock keyed by a dedicated prefix: acquire at enqueue, hold across retries, release on terminal completion. Callers use the entrypoint, never the raw task.
+{% endif %}
+{% else %}
+### Tool domain backed by an external API
+When a tool group calls an external service, keep the transport out of the tool functions: create a typed client class in `app/mcp/tools/<domain>_client.py` (config via `Settings`), and let the `@tool` functions stay thin wrappers that validate input, call the client and shape the response.
+{% endif %}
+
+---
+
+## Project specifics
+
+<!--
+Fill this in as the project grows — this is the only section the scaffold cannot know.
+Suggested content:
+- External integrations actually used (vendors, credentials location, sandbox vs prod)
+- Auth model (provider, token flow, which routes are protected)
+- Domain glossary and invariants agents must not break
+- Deploy targets / environments and anything about shared state (DBs, queues)
+- Deviations from the conventions above, with the reason
+-->
+
+_Nothing here yet. When you add project-specific rules, integrations or domain constraints, document them in this section — agents read this file first._
