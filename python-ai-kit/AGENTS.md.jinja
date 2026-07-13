@@ -28,14 +28,12 @@ Read these before touching anything. They override every other section.
 - **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
 {% if project_type in ["api-monolith", "api-microservice"] %}
 - **Respect layer boundaries.** Routes → services → repositories. Services own business logic and error translation. Repositories do DB I/O only. See [Layer contracts](#layer-contracts).
-- **Test before declaring done.** Unit tests for services, integration tests for repos/routes. "It compiles" is not done.
 {% elif project_type == "agent" %}
 - **Keep the workflow layered.** Routes stay thin; orchestration lives in graph nodes (`app/agent/workflows/`); LLM interaction lives in engines (`app/agent/engines/`); prompts live in `app/agent/prompts/` — never inline prompt strings in nodes or routes.
-- **Test before declaring done.** Unit tests for engines/nodes/tools, integration tests for routes. "It compiles" is not done.
 {% else %}
 - **Keep tools modular.** One `FastMCP` sub-router per tool domain in `app/mcp/tools/`, mounted in `app/mcp/mcp.py`. No business logic in `app/main.py`.
-- **Test before declaring done.** Unit tests for tool functions. "It compiles" is not done.
 {% endif %}
+- **Test before declaring done.** Unit tests for {% if project_type in ["api-monolith", "api-microservice"] %}services, integration tests for repos/routes{% elif project_type == "agent" %}engines/nodes/tools, integration tests for routes{% else %}tool functions{% endif %}. "It compiles" is not done.
 
 > Note: the scaffold ships **no tests** — create the `tests/` directory with your first change. Pytest (`pytest`, `pytest-asyncio`, `pytest-cov`) is already in the `dev` dependency group.
 
