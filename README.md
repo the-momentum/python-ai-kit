@@ -115,6 +115,7 @@ The generated project includes:
 - AI agent integration with Streamlit GUI
 - Comprehensive testing setup
 - Modern Python tooling (uv, ruff, etc.)
+- `AGENTS.md` + `CLAUDE.md` - instructions for AI coding assistants
 
 ---
 
