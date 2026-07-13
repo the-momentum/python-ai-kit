@@ -13,34 +13,28 @@ Scaffolded from [`python-ai-kit`](https://github.com/the-momentum/python-ai-kit)
 Read these before touching anything. They override every other section.
 
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
-1. **Never hand-author Alembic migrations.** Change the model → `just create-migration "..."` → review the generated file → commit. Never write a migration from scratch. If a generated migration needs tweaks (backfill, partial unique index), edit it — don't replace it.
-2. **Never run `just migrate` / `just downgrade` without user approval.** Migrations touch shared DB state. Generate, show, wait, apply.
-3. **Ship nothing without the quality gate:**
-{% else %}
-1. **Ship nothing without the quality gate:**
+- **Never hand-author Alembic migrations.** Change the model → `just create-migration "..."` → review the generated file → commit. Never write a migration from scratch. If a generated migration needs tweaks (backfill, partial unique index), edit it — don't replace it.
+- **Never run `just migrate` / `just downgrade` without user approval.** Migrations touch shared DB state. Generate, show, wait, apply.
 {% endif %}
-   ```bash
-   uv run pre-commit run --all-files
-   uv run ruff check . --fix && uv run ruff format .
-   uv run ty check .
-   uv run pytest -v --cov=app
-   ```
-   Fix every failure. No `--no-verify`. No skipped hooks.
-{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
-4. **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys, DB credentials — scan the diff every time. Only `config/.env.example` belongs in git.
-5. **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
+- **Ship nothing without the quality gate:**
+  ```bash
+  uv run pre-commit run --all-files
+  uv run ruff check . --fix && uv run ruff format .
+  uv run ty check .
+  uv run pytest -v --cov=app
+  ```
+  Fix every failure. No `--no-verify`. No skipped hooks.
+- **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys{% if project_type in ["api-monolith", "api-microservice", "agent"] %}, DB credentials{% endif %} — scan the diff every time. Only `config/.env.example` belongs in git.
+- **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
 {% if project_type in ["api-monolith", "api-microservice"] %}
-6. **Respect layer boundaries.** Routes → services → repositories. Services own business logic and error translation. Repositories do DB I/O only. See [Layer contracts](#layer-contracts).
-7. **Test before declaring done.** Unit tests for services, integration tests for repos/routes. "It compiles" is not done.
+- **Respect layer boundaries.** Routes → services → repositories. Services own business logic and error translation. Repositories do DB I/O only. See [Layer contracts](#layer-contracts).
+- **Test before declaring done.** Unit tests for services, integration tests for repos/routes. "It compiles" is not done.
+{% elif project_type == "agent" %}
+- **Keep the workflow layered.** Routes stay thin; orchestration lives in graph nodes (`app/agent/workflows/`); LLM interaction lives in engines (`app/agent/engines/`); prompts live in `app/agent/prompts/` — never inline prompt strings in nodes or routes.
+- **Test before declaring done.** Unit tests for engines/nodes/tools, integration tests for routes. "It compiles" is not done.
 {% else %}
-6. **Keep the workflow layered.** Routes stay thin; orchestration lives in graph nodes (`app/agent/workflows/`); LLM interaction lives in engines (`app/agent/engines/`); prompts live in `app/agent/prompts/` — never inline prompt strings in nodes or routes.
-7. **Test before declaring done.** Unit tests for engines/nodes/tools, integration tests for routes. "It compiles" is not done.
-{% endif %}
-{% else %}
-2. **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys — scan the diff every time. Only `config/.env.example` belongs in git.
-3. **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
-4. **Keep tools modular.** One `FastMCP` sub-router per tool domain in `app/mcp/tools/`, mounted in `app/mcp/mcp.py`. No business logic in `app/main.py`.
-5. **Test before declaring done.** Unit tests for tool functions. "It compiles" is not done.
+- **Keep tools modular.** One `FastMCP` sub-router per tool domain in `app/mcp/tools/`, mounted in `app/mcp/mcp.py`. No business logic in `app/main.py`.
+- **Test before declaring done.** Unit tests for tool functions. "It compiles" is not done.
 {% endif %}
 
 > Note: the scaffold ships **no tests** — create the `tests/` directory with your first change. Pytest (`pytest`, `pytest-asyncio`, `pytest-cov`) is already in the `dev` dependency group.
@@ -238,7 +232,7 @@ app/
 │   ├── tools/          # Tool functions + tool_registry (Toolpacks, ToolManager).
 │   ├── prompts/        # All prompt/instruction text lives here.
 │   ├── static/         # Canned messages (errors, refusals) per language.
-│   └── agent_manager.py# AgentManager registry.
+│   └── agent_manager.py  # AgentManager registry.
 ├── api/routes/v1/      # chat.py — the HTTP entrypoint.
 ├── models/ · schemas/  # SQLAlchemy models + Pydantic schemas.
 ├── integrations/       # Plugin integrations{% if plugins %} ({{ plugins | join(", ") }}){% endif %}.
@@ -496,7 +490,7 @@ curl -X POST http://localhost:8000/<prefix>/<resource> -H "Content-Type: applica
 
 ### Database
 ```bash
-docker exec -it postgres__{{ project_name }} psql -U $DB_USER -d $DB_NAME   # creds from config/.env
+docker exec -it postgres__{{ project_name }} psql -U {{ project_name }} -d {{ project_name }}   # DB user/name are seeded from the project name; see config/.env
 # \dt   SELECT * FROM <table> LIMIT 5;
 ```
 
