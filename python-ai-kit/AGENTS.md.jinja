@@ -34,7 +34,7 @@ Read these before touching anything. They override every other section.
 7. **Test before declaring done.** Unit tests for services, integration tests for repos/routes. "It compiles" is not done.
 {% else %}
 6. **Keep the workflow layered.** Routes stay thin; orchestration lives in graph nodes (`app/agent/workflows/`); LLM interaction lives in engines (`app/agent/engines/`); prompts live in `app/agent/prompts/` — never inline prompt strings in nodes or routes.
-7. **Test before declaring done.** Unit tests for engines/nodes/services, integration tests for routes. "It compiles" is not done.
+7. **Test before declaring done.** Unit tests for engines/nodes/tools, integration tests for routes. "It compiles" is not done.
 {% endif %}
 {% else %}
 2. **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys — scan the diff every time. Only `config/.env.example` belongs in git.
@@ -675,6 +675,37 @@ When you integrate an external system (payment provider, CRM, storage, LLM vendo
 
 1. Create `app/integrations/<name>/client.py` — a typed client class owning all HTTP/SDK calls.
 2. Add its secrets/config to `Settings` in `app/config.py` + `config/.env.example`. Never hardcode.
+{% if project_type == "agent" %}
+3. Expose a provider function and inject the client where it's used (an engine, tool, or route) — never instantiate clients ad hoc:
+
+```python
+# app/integrations/<name>/dependencies.py
+def get_<name>_client() -> <Name>Client:
+    return <Name>Client(api_key=settings.<name>_api_key)
+
+# in a route, or wired into the engine/tool that needs it
+client: Annotated[<Name>Client, Depends(get_<name>_client)]
+```
+
+4. Keep business logic out of the client — it belongs in the engine/tool that uses it.
+
+### Provider strategy (multi-vendor integrations)
+If an integration spans multiple vendors of the same kind (image-gen providers, voice agents, LLM vendors, ...), don't `if vendor == ...` your way through engines. Define a strategy per vendor and select it by name:
+
+```python
+# app/agent/providers/base.py
+class BaseProviderStrategy(ABC):
+    @property
+    @abstractmethod
+    def name(self) -> str: ...
+
+# app/agent/providers/<vendor>/strategy.py
+class <Vendor>Strategy(BaseProviderStrategy):
+    @property
+    def name(self) -> str:
+        return "<vendor>"
+```
+{% else %}
 3. Expose a provider function and inject the client into services — never instantiate clients inside service methods:
 
 ```python
@@ -704,6 +735,7 @@ class <Vendor>Strategy(BaseProviderStrategy):
     def name(self) -> str:
         return "<vendor>"
 ```
+{% endif %}
 {% if project_type in ["api-monolith", "api-microservice"] %}
 
 ### FastAPI DI providers instead of module singletons
