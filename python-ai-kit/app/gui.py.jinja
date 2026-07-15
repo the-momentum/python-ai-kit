@@ -35,6 +35,12 @@ from app.agent.factories.workflow_factory import WorkflowAgentFactory
 from app.agent.workflows.agent_workflow import user_assistant_graph
 from app.agent.workflows.generation_events import WorkflowState
 from app.agent.workflows.nodes import StartNode
+{% if "mlflow" in plugins %}
+from app.integrations.mlflow import init_tracing
+
+# cache_resource so tracing is initialised once per process, not on every Streamlit rerun
+st.cache_resource(init_tracing)()
+{% endif %}
 
 if "chats" not in st.session_state:
     st.session_state.chats = 1

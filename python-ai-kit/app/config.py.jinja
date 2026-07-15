@@ -132,7 +132,7 @@ class Settings(BaseSettings):
 
     # MLflow SETTINGS
     MLFLOW_TRACING_ENABLED: bool = False
-    MLFLOW_TRACKING_URI: str = "http://localhost:5000"
+    MLFLOW_TRACKING_URI: str = "http://mlflow:5000"
     MLFLOW_EXPERIMENT: str = "agent"
 
     {% endif %}
