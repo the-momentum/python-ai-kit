@@ -157,6 +157,7 @@ _exclude:
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
   - "{{ 'app/integrations/sentry.py' if 'sentry' not in plugins else '' }}"
+  - "{{ 'app/integrations/mlflow.py' if 'mlflow' not in plugins else '' }}"
   - "{{ 'README_DVC.md' if not add_dvc else '' }}"
 
 _tasks:

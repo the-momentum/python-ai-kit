@@ -24,6 +24,9 @@ from app.database import engine
 {% if "celery" in plugins %}
 from app.integrations.celery import create_celery
 {% endif %}
+{% if "mlflow" in plugins %}
+from app.integrations.mlflow import init_tracing
+{% endif %}
 {% if "sentry" in plugins %}
 from app.integrations.sentry import init_sentry
 {% endif %}
@@ -51,6 +54,9 @@ celery_app = create_celery()
 {% endif %}
 {% if "sentry" in plugins %}
 init_sentry()
+{% endif %}
+{% if "mlflow" in plugins %}
+init_tracing()
 {% endif %}
 
 add_cors_middleware(api)
