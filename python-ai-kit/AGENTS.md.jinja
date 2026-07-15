@@ -523,7 +523,7 @@ Verify a new tool by listing tools and invoking it through an MCP client (e.g. t
 
 | Command | Description |
 |---------|-------------|
-{% if project_type in ["api-monolith", "api-microservice"] %}
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 | `just build` | Build Docker images |
 | `just run` / `just up` | Start detached / foreground |
 | `just stop` / `just down` | Stop / remove containers |
@@ -551,6 +551,9 @@ Verify a new tool by listing tools and invoking it through an MCP client (e.g. t
 - Streamlit GUI: `uv run streamlit run app/gui.py`
 {% if "celery" in plugins %}
 - Flower (Celery monitoring): start it via `scripts/start/flower.sh`, then http://localhost:5555
+{% endif %}
+{% if "mlflow" in plugins %}
+- MLflow UI (tracing): http://localhost:5000 (the `mlflow` compose service)
 {% endif %}
 {% endif %}
 

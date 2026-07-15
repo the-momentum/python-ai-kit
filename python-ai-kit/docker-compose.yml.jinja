@@ -39,6 +39,7 @@ services:
       - /root_project/.venv
     restart: on-failure
 
+  {% if "celery" in plugins %}
   celery-worker:
     container_name: celery-worker__{{project_name}}
     build: *shared-build
@@ -88,7 +89,29 @@ services:
     image: redis:8
     volumes:
       - redis_data:/var/lib/redis/data
+  {% endif %}
+
+  {% if "mlflow" in plugins %}
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.14.0-full
+    container_name: mlflow__{{project_name}}
+    entrypoint: ["sh", "/entrypoint.sh"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./docker/mlflow/ensure_db.py:/ensure_db.py:ro
+      - ./docker/mlflow/entrypoint.sh:/entrypoint.sh:ro
+      - mlflow_artifacts:/mlflow-artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+  {% endif %}
 
 volumes:
   postgres_data:
+  {% if "celery" in plugins %}
   redis_data:
+  {% endif %}
+  {% if "mlflow" in plugins %}
+  mlflow_artifacts:
+  {% endif %}
