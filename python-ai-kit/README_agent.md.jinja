@@ -19,6 +19,36 @@ echo "API_KEY=your_api_key_here" > config/.env
 
 Replace `your_api_key_here` with your actual API key for the LLM provider you're using.
 
+## 🐳 Running with Docker
+
+The project ships with a `docker-compose.yml` that starts PostgreSQL and the FastAPI app{% if "celery" in plugins %}, plus Redis and the Celery worker/beat/Flower services{% endif %}{% if "mlflow" in plugins %}, plus an MLflow tracking server{% endif %}. Make sure `config/.env` exists first, then:
+
+```bash
+just up       # foreground (just run for detached)
+just migrate  # apply database migrations (run from the host)
+```
+
+The API is available at http://localhost:8000 (Swagger: `/docs`).
+{% if "mlflow" in plugins %}
+
+## 📊 Tracing with MLflow
+
+Agent runs (LLM calls, tool calls, MCP tool calls) can be traced to MLflow. Enable it in `config/.env`:
+
+```bash
+MLFLOW_TRACING_ENABLED=True
+```
+
+Browse traces in the MLflow UI at http://localhost:5000 (experiment set by `MLFLOW_EXPERIMENT`, default `agent`).
+
+The default `MLFLOW_TRACKING_URI=http://mlflow:5000` targets the `mlflow` docker compose service. When running the app outside docker (e.g. `uv run fastapi dev app/main.py` or the Streamlit GUI), start a local server and point the URI at it:
+
+```bash
+uv run mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000
+# and in config/.env: MLFLOW_TRACKING_URI="http://localhost:5000"
+```
+{% endif %}
+
 ## 🏗️ Architecture Overview
 
 This framework provides building blocks for creating custom AI agent workflows:
