@@ -128,6 +128,15 @@ class Settings(BaseSettings):
     # 2. .env
     # 3. default values in pydantic settings
 
+    {% if "mlflow" in plugins %}
+
+    # MLflow SETTINGS
+    MLFLOW_TRACING_ENABLED: bool = False
+    MLFLOW_TRACKING_URI: str = "http://mlflow:5000"
+    MLFLOW_EXPERIMENT: str = "agent"
+
+    {% endif %}
+
 
 @lru_cache()
 def _get_settings() -> Settings:

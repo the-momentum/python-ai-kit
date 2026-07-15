@@ -35,6 +35,12 @@ from app.agent.factories.workflow_factory import WorkflowAgentFactory
 from app.agent.workflows.agent_workflow import user_assistant_graph
 from app.agent.workflows.generation_events import WorkflowState
 from app.agent.workflows.nodes import StartNode
+{% if "mlflow" in plugins %}
+from app.integrations.mlflow import init_tracing, trace_chat
+
+# cache_resource so tracing is initialised once per process, not on every Streamlit rerun
+st.cache_resource(init_tracing)()
+{% endif %}
 
 if "chats" not in st.session_state:
     st.session_state.chats = 1
@@ -243,6 +249,19 @@ if prompt := st.chat_input("Ask me something"):
 
                         chat_history.append(ModelResponse(parts=[TextPart(content=msg["text"])]))
 
+                {% if "mlflow" in plugins %}
+                with trace_chat(prompt) as span:
+                    result = asyncio.run(
+                        user_assistant_graph.run(
+                            inputs=StartNode(),
+                            state=initial_state,
+                            deps=manager.to_deps(
+                                message=prompt, language=st.session_state.default_language, chat_history=chat_history
+                            ),
+                        )
+                    )
+                    span.set_outputs(result)
+                {% else %}
                 result = asyncio.run(
                     user_assistant_graph.run(
                         inputs=StartNode(),
@@ -252,6 +271,7 @@ if prompt := st.chat_input("Ask me something"):
                         ),
                     )
                 )
+                {% endif %}
 
                 response = result
         except UsageLimitExceeded as e:

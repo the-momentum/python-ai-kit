@@ -9,6 +9,9 @@ from app.agent.workflows.agent_workflow import user_assistant_graph
 from app.agent.workflows.generation_events import WorkflowState
 from app.agent.workflows.nodes import StartNode
 from app.config import settings
+{% if "mlflow" in plugins %}
+from app.integrations.mlflow import trace_chat
+{% endif %}
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,6 +42,18 @@ async def chat(request: ChatRequest):
 
         initial_state = WorkflowState()
 
+        {% if "mlflow" in plugins %}
+        with trace_chat(request.message) as span:
+            result = await asyncio.wait_for(
+                user_assistant_graph.run(
+                    inputs=StartNode(),
+                    state=initial_state,
+                    deps=manager.to_deps(message=request.message, language=settings.default_language),
+                ),
+                timeout=settings.timeout,
+            )
+            span.set_outputs(result)
+        {% else %}
         result = await asyncio.wait_for(
             user_assistant_graph.run(
                 inputs=StartNode(),
@@ -47,6 +62,7 @@ async def chat(request: ChatRequest):
             ),
             timeout=settings.timeout,
         )
+        {% endif %}
 
         logger.info("Chat request processed successfully")
         return ChatResponse(response=result)

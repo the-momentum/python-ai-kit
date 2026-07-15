@@ -22,6 +22,9 @@ plugins:
     - "sqladmin"
     - "celery"
     - "sentry"
+    {% if project_type == "agent" %}
+    - "mlflow"
+    {% endif %}
     {% else %}
     []
     {% endif %}
@@ -30,6 +33,9 @@ plugins:
     SQLAdmin [interface for database management]: sqladmin
     Celery [task queue]: celery
     Sentry [error tracking]: sentry
+    {% if project_type == "agent" %}
+    MLflow [observability and tracing]: mlflow
+    {% endif %}
     {% else %}
     {}
     {% endif %}
@@ -104,8 +110,8 @@ _exclude:
   - "{{ 'app/utils/mappings_meta.py' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
   - "{{ 'README_api.md' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
-  - "{{ 'Dockerfile' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
-  - "{{ 'docker-compose.yml' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
+  - "{{ 'Dockerfile' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
+  - "{{ 'docker-compose.yml' if project_type not in ['api-monolith', 'api-microservice', 'agent'] else '' }}"
 
   - "{{ 'app/api.py' if project_type != 'api-monolith' else '' }}"
   - "{{ 'app/user' if project_type != 'api-monolith' else '' }}"
@@ -151,6 +157,8 @@ _exclude:
   - "{{ 'app/integrations/sqladmin' if 'sqladmin' not in plugins else '' }}"
   - "{{ 'app/integrations/celery' if 'celery' not in plugins else '' }}"
   - "{{ 'app/integrations/sentry.py' if 'sentry' not in plugins else '' }}"
+  - "{{ 'app/integrations/mlflow.py' if 'mlflow' not in plugins else '' }}"
+  - "{{ 'docker' if 'mlflow' not in plugins else '' }}"
   - "{{ 'README_DVC.md' if not add_dvc else '' }}"
 
 _tasks:

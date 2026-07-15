@@ -36,6 +36,9 @@ dependencies = [
     {% if "sentry" in plugins %}
     "sentry-sdk[fastapi]>=2.42.1",
     {% endif %}
+    {% if "mlflow" in plugins %}
+    "mlflow>=3.14.0",
+    {% endif %}
 ]
 
 [dependency-groups]
