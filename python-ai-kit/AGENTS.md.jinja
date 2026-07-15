@@ -558,7 +558,7 @@ Verify a new tool by listing tools and invoking it through an MCP client (e.g. t
 {% if project_type in ["api-monolith", "api-microservice"] %}
 Python {{ default_python_version }} · FastAPI · SQLAlchemy 2.0 · PostgreSQL · Alembic · Pydantic 2{% if "celery" in plugins %} · Celery + Redis{% endif %}{% if "sqladmin" in plugins %} · SQLAdmin{% endif %}{% if "sentry" in plugins %} · Sentry{% endif %} · Ruff · `ty` · `uv`
 {% elif project_type == "agent" %}
-Python {{ default_python_version }} · Pydantic AI · pydantic-graph · FastAPI · Streamlit · SQLAlchemy 2.0 · PostgreSQL · Alembic{% if "celery" in plugins %} · Celery + Redis{% endif %}{% if "sqladmin" in plugins %} · SQLAdmin{% endif %}{% if "sentry" in plugins %} · Sentry{% endif %} · Ruff · `ty` · `uv`
+Python {{ default_python_version }} · Pydantic AI · pydantic-graph · FastAPI · Streamlit · SQLAlchemy 2.0 · PostgreSQL · Alembic{% if "celery" in plugins %} · Celery + Redis{% endif %}{% if "sqladmin" in plugins %} · SQLAdmin{% endif %}{% if "sentry" in plugins %} · Sentry{% endif %}{% if "mlflow" in plugins %} · MLflow{% endif %} · Ruff · `ty` · `uv`
 {% elif project_type == "mcp-server" %}
 Python {{ default_python_version }} · FastMCP · Pydantic 2 · Ruff · `ty` · `uv`
 {% endif %}

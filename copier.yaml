@@ -22,6 +22,9 @@ plugins:
     - "sqladmin"
     - "celery"
     - "sentry"
+    {% if project_type == "agent" %}
+    - "mlflow"
+    {% endif %}
     {% else %}
     []
     {% endif %}
@@ -30,6 +33,9 @@ plugins:
     SQLAdmin [interface for database management]: sqladmin
     Celery [task queue]: celery
     Sentry [error tracking]: sentry
+    {% if project_type == "agent" %}
+    MLflow [observability and tracing]: mlflow
+    {% endif %}
     {% else %}
     {}
     {% endif %}
