@@ -34,7 +34,7 @@ check:
 
 # Run the tests
 test $ENV="config/.env.test":
-    uv run pytest -v --cov=app
+    {{uv_cmd}} pytest -v --cov=app
 
 # Apply all migrations
 migrate:
