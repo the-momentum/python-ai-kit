@@ -3,12 +3,11 @@ import hmac
 from datetime import datetime, timezone
 from functools import lru_cache
 
-from app.config import settings
 from fastapi import Request
 from pydantic import SecretStr
 
 from sqladmin.authentication import AuthenticationBackend
-
+from app.config import settings
 
 class AdminAuth(AuthenticationBackend):
     def __init__(self, secret_key: str):
