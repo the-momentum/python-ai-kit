@@ -1,7 +1,8 @@
 set windows-shell := ["cmd.exe", "/c"]
 
 docker_command := "docker compose -f docker-compose.yml"
-alembic_cmd := "uv run alembic"
+uv_cmd := "uv run"
+alembic_cmd := uv_cmd + " alembic"
 
 # Show this help
 default:
@@ -27,9 +28,13 @@ stop:
 down:
     {{docker_command}} down
 
+# Run pre-commit check
+check:
+	{{uv_cmd}} pre-commit run --all-files
+
 # Run the tests
 test $ENV="config/.env.test":
-    uv run pytest -v --cov=app
+    {{uv_cmd}} pytest -v --cov=app
 
 # Apply all migrations
 migrate:
