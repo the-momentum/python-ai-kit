@@ -5,7 +5,7 @@
 ## Database
 
 1. SQLAlchemy base model with auto-generated `__tablename__` and `type_annotation_map` for more strict python to SQL type conversion.
-2. Local database session defines on reusable database pools.
+2. Async database session (`AsyncSession` via `async_sessionmaker`) built on a reusable async engine connection pool. Repositories and services are `async` and use SQLAlchemy 2.0 `select(...)` + `await session.execute(...)`.
 3. Custom types (with `type` keyword - python 3.12+) which require custom mapping in `type_annotation_map`.
 4. Generic `mapped_column` helpers.
 

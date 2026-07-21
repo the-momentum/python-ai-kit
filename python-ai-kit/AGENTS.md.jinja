@@ -26,6 +26,9 @@ Read these before touching anything. They override every other section.
   Fix every failure. No `--no-verify`. No skipped hooks.
 - **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys{% if project_type in ["api-monolith", "api-microservice", "agent"] %}, DB credentials{% endif %} — scan the diff every time. Only `config/.env.example` belongs in git.
 - **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+- **The DB layer is async.** The session is `AsyncSession` (`AsyncDbSession` dependency). Every repository and DB-touching service method is `async def`; every call down the chain (route → service → repo) is `await`ed. Build queries with SQLAlchemy 2.0 style — `select(...)` + `await db_session.execute(stmt)` then `.scalar_one_or_none()` / `.scalars().all()`, never the legacy `db_session.query(...)`. Outside routes (scripts, background jobs) get a session from `adb_session_ctx`.
+{% endif %}
 {% if project_type in ["api-monolith", "api-microservice"] %}
 - **Respect layer boundaries.** Routes → services → repositories. Services own business logic and error translation. Repositories do DB I/O only. See [Layer contracts](#layer-contracts).
 {% elif project_type == "agent" %}
@@ -48,20 +51,20 @@ Before writing code, map the task to one of these flows. If the task doesn't fit
 1. Schema in `app/schemas/<resource>.py` — `Read` / `Create` / `Update` variants (see `app/schemas/user.py`), re-exported from `app/schemas/__init__.py`.
 2. Route in `app/api/routes/v1/<resource>.py` — `async def`, `response_model`, `status_code` (use `fastapi.status`), path in kebab-case, no trailing slash on the prefixed router's root (`""`, not `"/"`).
 3. Register the module router on `head_router` in `app/api/__init__.py` with a prefix and tag.
-4. Delegate to a service — never touch the DB from a route. Inject the session via the `DbSession` annotated type from `app/database.py`.
+4. Delegate to a service — never touch the DB from a route. Inject the session via the `AsyncDbSession` annotated type from `app/database.py`.
 5. Tests: integration test hitting the route, unit test for the service method.
 
 ### Add a new model
 1. Model in `app/models/<name>.py` using `BaseDbModel` and `Mapped[...]` types from `app/mappings.py` (see `app/models/user.py`).
 2. Update `app/models/__init__.py` exports.
 3. Schemas for I/O shapes (see above).
-4. Repository in `app/repositories/<name>.py` extending `CrudRepository[Model, CreateSchema, UpdateSchema]` if you need queries beyond CRUD.
+4. Repository in `app/repositories/<name>.py` extending `CrudRepository[Model, CreateSchema, UpdateSchema]` if you need queries beyond CRUD — write them as `async def` with `select(...)` + `await db_session.execute(...)` (see `app/user/repositories/activity_repository.py`).
 5. **Autogenerate migration** — `just create-migration "Add <thing>"`. Review it. Ask before applying.
 6. Reflect any new constraint/index in `__table_args__` to keep ORM and DB in sync.
 
 ### Add a new service
 1. `app/services/<name>.py` extending `AppService[Repo, Model, CreateSchema, UpdateSchema]` (base class: `app/services/services.py`).
-2. Business logic only — repositories do the DB work.
+2. Business logic only — repositories do the DB work. New methods are `async def` and `await` their repo calls.
 3. Wrap methods that can raise domain/DB errors with `@handle_exceptions` (from `app/utils/exceptions.py`).
 4. Expose via `app/services/__init__.py`.
 
@@ -73,8 +76,8 @@ Before writing code, map the task to one of these flows. If the task doesn't fit
 {% elif project_type == "api-monolith" %}
 ### Add a new feature module
 1. Create a package `app/<feature>/` mirroring `app/user/`: `models.py`, `schemas.py`, `routes/v1/`, `services/`, `repositories/`.
-2. Repository extends `CrudRepository[Model, CreateSchema, UpdateSchema]` (base class: `app/repositories.py`).
-3. Service extends `AppService[Repo, Model, CreateSchema, UpdateSchema]` (base class: `app/services.py`); expose it from `app/<feature>/services/__init__.py`.
+2. Repository extends `CrudRepository[Model, CreateSchema, UpdateSchema]` (base class: `app/repositories.py`) — extra queries are `async def` with `select(...)` + `await db_session.execute(...)`.
+3. Service extends `AppService[Repo, Model, CreateSchema, UpdateSchema]` (base class: `app/services.py`); new methods are `async def` and `await` their repo calls; expose it from `app/<feature>/services/__init__.py`.
 4. Register the feature router on `head_router` in `app/api.py` with a prefix and tag.
 5. **Autogenerate migration** — `just create-migration "Add <thing>"`. Review it. Ask before applying.
 6. Tests: integration test hitting the route, unit test for the service.
@@ -82,7 +85,7 @@ Before writing code, map the task to one of these flows. If the task doesn't fit
 ### Add a new endpoint to an existing module
 1. Schema variants in `app/<feature>/schemas.py`.
 2. Route in `app/<feature>/routes/v1/` — `async def`, `response_model`, `status_code` (use `fastapi.status`), path in kebab-case, no trailing slash on the prefixed router's root (`""`, not `"/"`).
-3. Delegate to the module's service — never touch the DB from a route. Inject the session via the `DbSession` annotated type from `app/database.py`.
+3. Delegate to the module's service — never touch the DB from a route. Inject the session via the `AsyncDbSession` annotated type from `app/database.py`.
 4. Tests for route + service.
 
 ### Add a new model
@@ -171,7 +174,7 @@ app/
 ├── repositories/     # DB I/O only. CrudRepository base in repositories.py.
 ├── integrations/     # Plugin integrations{% if plugins %} ({{ plugins | join(", ") }}){% endif %}.
 ├── utils/            # exceptions.py, config_utils.py, mappings_meta.py.
-├── database.py       # BaseDbModel, DbSession (annotated session dependency).
+├── database.py       # BaseDbModel, AsyncDbSession (annotated session dependency).
 ├── mappings.py       # Custom Annotated SQLAlchemy types.
 ├── middlewares.py    # CORS.
 ├── main.py           # App assembly.
@@ -202,7 +205,7 @@ app/
 ├── api.py            # head_router: mounts /health and feature routers.
 ├── services.py       # AppService base class.
 ├── repositories.py   # CrudRepository base class.
-├── database.py       # BaseDbModel, DbSession (annotated session dependency).
+├── database.py       # BaseDbModel, AsyncDbSession (annotated session dependency).
 ├── mappings.py       # Custom Annotated SQLAlchemy types.
 ├── middlewares.py    # CORS.
 ├── main.py           # App assembly.
@@ -235,7 +238,7 @@ app/
 ├── models/ · schemas/  # SQLAlchemy models + Pydantic schemas.
 ├── integrations/       # Plugin integrations{% if plugins %} ({{ plugins | join(", ") }}){% endif %}.
 ├── utils/              # llm_vendor.py, date_handlers.py, config_utils.py.
-├── database.py         # BaseDbModel, DbSession.
+├── database.py         # BaseDbModel, AsyncDbSession.
 ├── mappings.py         # Custom Annotated SQLAlchemy types.
 ├── gui.py              # Streamlit chat UI.
 ├── main.py             # App assembly.
@@ -291,7 +294,7 @@ Model new code on the canonical files below — they are the reference implement
 | Schemas (Read/Create/Update) | `app/schemas/user.py` |
 | Schema exports | `app/schemas/__init__.py` |
 | Custom column types | `app/mappings.py` (`PrimaryKey`, `Unique`, `UniqueIndex`, `Indexed`, `str_10/50/100/255`, `email`, `numeric_*`, `datetime_tz`, `OneToMany`, `ManyToOne`, `FKUser`) |
-| Session dependency | `app/database.py` (`DbSession` — annotated FastAPI dependency) |
+| Session dependency | `app/database.py` (`AsyncDbSession` — annotated FastAPI dependency) |
 | Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
 
 The scaffold ships `app/api/routes/v1/user.py`, `app/services/user.py` and `app/repositories/user.py` as **empty stubs** — they mark where each layer lives but contain no example code. When implementing them (or any new resource), follow this shape:
@@ -316,15 +319,15 @@ thing_service = ThingService(ThingRepository, Thing, getLogger(__name__))
 
 # app/api/routes/v1/<resource>.py
 from fastapi import APIRouter, status
-from app.database import DbSession
+from app.database import AsyncDbSession
 from app.schemas import ThingCreate, ThingRead
 from app.services.thing import thing_service
 
 router = APIRouter()
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=ThingRead)
-async def create_thing(payload: ThingCreate, db: DbSession):
-    return thing_service.create(db, payload)
+async def create_thing(payload: ThingCreate, db: AsyncDbSession):
+    return await thing_service.create(db, payload)
 ```
 
 Then mount `router` on `head_router` in `app/api/__init__.py` with a prefix and tag.
@@ -341,7 +344,7 @@ Then mount `router` on `head_router` in `app/api/__init__.py` with a prefix and 
 | Service mixin | `app/user/services/activity_mixin.py` |
 | HATEOAS responses | `app/utils/api_utils.py` (`format_response`), `app/utils/hateoas.py` |
 | Custom column types | `app/mappings.py` (`PrimaryKey`, `Unique`, `UniqueIndex`, `Indexed`, `str_10/50/100/255`, `email`, `numeric_*`, `datetime_tz`, `OneToMany`, `ManyToOne`, `FKUser`) |
-| Session dependency | `app/database.py` (`DbSession` — annotated FastAPI dependency) |
+| Session dependency | `app/database.py` (`AsyncDbSession` — annotated FastAPI dependency) |
 | Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
 | Router registration | `app/api.py` (`head_router`) |
 
@@ -363,7 +366,7 @@ Services are exposed as module-level singletons (`user_service`) and imported di
 | Canned messages per language | `app/agent/static/default_msgs.py` |
 | HTTP entrypoint | `app/api/routes/v1/chat.py` |
 | Full custom-workflow example | `examples/pdf-agent/` |
-| Model / column types / session | `app/models/`, `app/mappings.py`, `app/database.py` (`DbSession`) |
+| Model / column types / session | `app/models/`, `app/mappings.py`, `app/database.py` (`AsyncDbSession`) |
 {% elif project_type == "mcp-server" %}
 | Pattern | Canonical file |
 |---------|----------------|
@@ -383,7 +386,7 @@ All error machinery lives in `app/utils/exceptions.py`:
 
 - **`handle_exception(exc, entity)`** — a `@singledispatch` translator registered for SQLAlchemy/psycopg `IntegrityError` (→ 400), `ResourceNotFoundError` (→ 404), `AttributeError` (→ 400) and `RequestValidationError` (→ 400). `app/main.py` wires it as the global `RequestValidationError` handler.
 - **`@handle_exceptions`** — decorator for service methods; catches known exceptions and routes them through `handle_exception`. The `AppService` base already applies it to `create` / `get` / `get_all` — apply it to new service methods that touch the DB or integrations.
-- **`ResourceNotFoundError`** — raise for missing domain objects, or use the built-in flag: `service.get(db, id, raise_404=True)`.
+- **`ResourceNotFoundError`** — raise for missing domain objects, or use the built-in flag: `await service.get(db, id, raise_404=True)`.
 
 Rules:
 
@@ -577,7 +580,7 @@ These are pointed reminders for the moment you're doing the thing. They repeat r
 - [ ] `async def` handler.
 - [ ] `response_model` + `status_code` (use `fastapi.status`).
 - [ ] Path in kebab-case. No trailing slash on the prefixed router's root (`""`, not `"/"`).
-- [ ] Route does nothing but validate + call service + return.
+- [ ] Route does nothing but validate + `await` service + return.
 {% if project_type == "api-microservice" %}
 - [ ] Router mounted on `head_router` in `app/api/__init__.py` with prefix and tag.
 {% else %}
@@ -586,6 +589,7 @@ These are pointed reminders for the moment you're doing the thing. They repeat r
 
 ### New service
 - [ ] Extends `AppService[Repo, Model, CreateSchema, UpdateSchema]`.
+- [ ] Methods are `async def` and `await` their repo calls.
 - [ ] Public methods first, `_private` helpers at the end.
 - [ ] No direct query building — that's the repository's job.
 - [ ] DB-touching methods wrapped with `@handle_exceptions`.
