@@ -1,15 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from app.database import DbSession
+from app.database import AsyncDbSession
 from app.user.models import User
+from sqlalchemy import exists, select
 
 
 class ActivityRepository:
-    def is_user_active(self, db_session: DbSession, object_id: UUID) -> bool:
-        return (
-            db_session.query(User)
-            .filter(User.id == object_id)
-            .filter(User.updated_at > datetime.now(timezone.utc) - timedelta(days=30))
-            .first()
-        ) is not None
+    async def is_user_active(self, db_session: AsyncDbSession, object_id: UUID) -> bool:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        stmt = select(
+            exists().where(User.id == object_id).where(User.updated_at > cutoff)
+        )
+        return bool(await db_session.scalar(stmt))

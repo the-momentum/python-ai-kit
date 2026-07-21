@@ -11,6 +11,10 @@ if TYPE_CHECKING:
     from app.services import AppService
 
 
+class MultipleResultsFoundError(Exception):
+    pass
+
+
 class ResourceNotFoundError(Exception):
     def __init__(self, entity_name: str, entity_id: int | UUID | None = None):
         self.entity_name = entity_name
