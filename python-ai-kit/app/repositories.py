@@ -31,14 +31,7 @@ class CrudRepository[
 
         return creation
 
-<<<<<<< HEAD
-    def get(self, db_session: DbSession, object_id: UUID | int) -> ModelType | None:
-        return db_session.get(self.model, object_id)
-
-    def get_all(
-=======
     async def create_many(
->>>>>>> 983b3d5 (sqlalchemy: sync -> async sqlalchemy setup)
         self,
         db_session: AsyncDbSession,
         creators: list[CreateSchemaType],
