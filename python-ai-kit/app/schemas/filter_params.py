@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
 
 from app.config import settings
 from app.database import BaseDbModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class FilterParams(BaseModel):
@@ -9,6 +10,7 @@ class FilterParams(BaseModel):
     page: int = Field(default=1, ge=1)
     limit: int = Field(default=settings.paging_limit, ge=1)
     sort_by: str | None = Field(default=None)
+    sort_order: Literal["asc", "desc"] = Field("asc", description="Sort order")
 
     @field_validator("filters")
     @classmethod
