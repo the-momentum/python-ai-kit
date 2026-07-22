@@ -12,6 +12,7 @@ dependencies = [
     {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
     "email-validator>=2.2.0",
     "psycopg>=3.2.9",
+	"asyncpg>=0.31.0",
     "sqlalchemy>=2.0.43",
     {% endif %}
     {% if project_type == "mcp-server" %}

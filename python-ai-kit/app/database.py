@@ -1,32 +1,22 @@
-from collections.abc import Iterator
-from typing import Annotated
+from contextlib import asynccontextmanager
+from typing import Annotated, AsyncIterator
 from uuid import UUID
-
-from fastapi import Depends
-from sqlalchemy import UUID as SQL_UUID
-from sqlalchemy import Engine, Text, create_engine, inspect
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Session,
-    declared_attr,
-    sessionmaker,
-)
 
 from app.config import settings
 from app.utils.mappings_meta import AutoRelMeta
-
-engine = create_engine(
-    settings.db_uri,
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=30,
-    pool_timeout=30,
-    pool_recycle=3600,
+from fastapi import Depends
+from sqlalchemy import UUID as SQL_UUID
+from sqlalchemy import Text, inspect
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
 )
-
-
-def _prepare_sessionmaker(engine: Engine) -> sessionmaker:
-    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    declared_attr,
+)
 
 
 class BaseDbModel(DeclarativeBase, metaclass=AutoRelMeta):
@@ -40,7 +30,9 @@ class BaseDbModel(DeclarativeBase, metaclass=AutoRelMeta):
 
     def __repr__(self) -> str:
         mapper = inspect(self.__class__)
-        fields = [f"{col.key}={repr(getattr(self, col.key, None))}" for col in mapper.columns]
+        fields = [
+            f"{col.key}={repr(getattr(self, col.key, None))}" for col in mapper.columns
+        ]
         return f"<{self.__class__.__name__}({', '.join(fields)})>"
 
     type_annotation_map = {
@@ -49,18 +41,35 @@ class BaseDbModel(DeclarativeBase, metaclass=AutoRelMeta):
     }
 
 
-SessionLocal = _prepare_sessionmaker(engine)
+async_engine = create_async_engine(
+    settings.db_async_uri,
+    pool_pre_ping=True,
+    pool_size=20,
+    max_overflow=30,
+    pool_timeout=30,
+    pool_recycle=3600,
+)
 
 
-def _get_db_dependency() -> Iterator[Session]:
-    db = SessionLocal()
+def _prepare_async_sessionmaker(engine: AsyncEngine) -> async_sessionmaker:
+    return async_sessionmaker(
+        autocommit=False, autoflush=False, bind=engine, expire_on_commit=False
+    )
+
+
+AsyncSessionLocal = _prepare_async_sessionmaker(async_engine)
+
+
+async def _get_async_db_dependency() -> AsyncIterator[AsyncSession]:
+    session = AsyncSessionLocal()
     try:
-        yield db
+        yield session
     except Exception as exc:
-        db.rollback()
+        await session.rollback()
         raise exc
     finally:
-        db.close()
+        await session.close()
 
 
-DbSession = Annotated[Session, Depends(_get_db_dependency)]
+adb_session_ctx = asynccontextmanager(_get_async_db_dependency)
+AsyncDbSession = Annotated[AsyncSession, Depends(_get_async_db_dependency)]

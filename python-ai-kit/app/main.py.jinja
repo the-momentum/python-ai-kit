@@ -19,7 +19,7 @@ from app.mcp import mcp_router
 {% endif %}
 from app.config import settings
 {% if "sqladmin" in plugins %}
-from app.database import engine
+from app.database import async_engine
 {% endif %}
 {% if "celery" in plugins %}
 from app.integrations.celery import create_celery
@@ -46,7 +46,7 @@ basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(messa
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 api = FastAPI(title=settings.api_name)
 {% if "sqladmin" in plugins %}
-admin = Admin(app=api, engine=engine, authentication_backend=admin_authentication_backend)
+admin = Admin(app=api, engine=async_engine, authentication_backend=admin_authentication_backend)
 add_admin_views(admin)
 {% endif %}
 {% if "celery" in plugins %}

@@ -1,15 +1,14 @@
+from app.database import AsyncDbSession, async_engine
 from fastapi import APIRouter
 from sqlalchemy import text
 from sqlalchemy.pool import QueuePool
-
-from app.database import DbSession, engine
 
 healthcheck_router = APIRouter()
 
 
 def get_pool_status() -> dict[str, str]:
     """Get connection pool status for monitoring."""
-    pool = engine.pool
+    pool = async_engine.pool
     if not isinstance(pool, QueuePool):
         return {"pool_type": type(pool).__name__}
     return {
@@ -21,11 +20,11 @@ def get_pool_status() -> dict[str, str]:
 
 
 @healthcheck_router.get("/db")
-async def database_health(db: DbSession) -> dict[str, str | dict[str, str]]:
+async def database_health(db: AsyncDbSession) -> dict[str, str | dict[str, str]]:
     """Database health check endpoint."""
     try:
         # Test connection
-        db.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1"))
 
         pool_status = get_pool_status()
         return {
