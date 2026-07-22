@@ -72,7 +72,7 @@ def handle_exceptions(func: Callable[P, T]) -> Callable[P, T]:
                 entity_name = getattr(args[0], "name", "unknown") if args else "unknown"
                 raise handle_exception(exc, entity_name) from exc
 
-        return async_wrapper  # type: ignore[return-value]
+        return async_wrapper  # ty: ignore[invalid-return-type]
 
     @wraps(func)
     def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
