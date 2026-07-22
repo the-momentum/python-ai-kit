@@ -1,14 +1,12 @@
+import asyncio
 from collections.abc import Callable
 from functools import singledispatch, wraps
-from typing import TYPE_CHECKING, Concatenate
+from typing import ParamSpec, TypeVar
 from uuid import UUID
 
 from fastapi.exceptions import HTTPException, RequestValidationError
 from psycopg.errors import IntegrityError as PsycopgIntegrityError
 from sqlalchemy.exc import IntegrityError as SQLAIntegrityError
-
-if TYPE_CHECKING:
-    from app.services import AppService
 
 
 class MultipleResultsFoundError(Exception):
@@ -59,15 +57,29 @@ def _(exc: RequestValidationError, _: str) -> HTTPException:
     )
 
 
-def handle_exceptions[**P, T, Service: AppService](
-    func: Callable[Concatenate[Service, P], T],
-) -> Callable[Concatenate[Service, P], T]:
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+def handle_exceptions(func: Callable[P, T]) -> Callable[P, T]:
+    if asyncio.iscoroutinefunction(func):
+        # async case
+        @wraps(func)
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            try:
+                return await func(*args, **kwargs)
+            except Exception as exc:
+                entity_name = getattr(args[0], "name", "unknown") if args else "unknown"
+                raise handle_exception(exc, entity_name) from exc
+
+        return async_wrapper  # type: ignore[return-value]
+
     @wraps(func)
-    def async_wrapper(instance: Service, *args: P.args, **kwargs: P.kwargs) -> T:
+    def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
-            return func(instance, *args, **kwargs)
+            return func(*args, **kwargs)
         except Exception as exc:
-            entity_name = getattr(instance, "name", "unknown")
+            entity_name = getattr(args[0], "name", "unknown") if args else "unknown"
             raise handle_exception(exc, entity_name) from exc
 
-    return async_wrapper
+    return sync_wrapper
