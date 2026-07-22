@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 from logging import Logger
 from uuid import UUID
 
@@ -5,7 +6,6 @@ from app.database import AsyncDbSession, BaseDbModel
 from app.repositories import CrudRepository
 from app.schemas import FilterParams
 from app.utils.exceptions import ResourceNotFoundError, handle_exceptions
-from pydantic import BaseModel
 
 
 class AppService[
