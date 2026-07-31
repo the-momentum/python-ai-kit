@@ -27,7 +27,7 @@ Read these before touching anything. They override every other section.
 - **Never commit secrets.** `config/.env`, `MASTER_KEY`, API keys{% if project_type in ["api-monolith", "api-microservice", "agent"] %}, DB credentials{% endif %} — scan the diff every time. Only `config/.env.example` belongs in git.
 - **Type hints on every function.** PEP 604 (`str | None`), not `Optional[str]`. All imports at module level — never inside functions.
 {% if project_type in ["api-monolith", "api-microservice", "agent"] %}
-- **The DB layer is async.** The session is `AsyncSession` (`AsyncDbSession` dependency). Every repository and DB-touching service method is `async def`; every call down the chain (route → service → repo) is `await`ed. Build queries with SQLAlchemy 2.0 style — `select(...)` + `await db_session.execute(stmt)` then `.scalar_one_or_none()` / `.scalars().all()`, never the legacy `db_session.query(...)`. Outside routes (scripts, background jobs) get a session from `adb_session_ctx`.
+- **The DB layer is async{% if "celery" in plugins %} — except Celery tasks{% endif %}.** The session is `AsyncSession` (`AsyncDbSession` dependency). Every repository and DB-touching service method is `async def`; every call down the chain (route → service → repo) is `await`ed. Build queries with SQLAlchemy 2.0 style — `select(...)` + `await db_session.execute(stmt)` then `.scalar_one_or_none()` / `.scalars().all()`, never the legacy `db_session.query(...)`. Outside routes (scripts, background jobs) get a session from `adb_session_ctx`.{% if "celery" in plugins %} **Celery is the one sync exception** — workers are synchronous, so tasks use the sync session (`db_session_ctx` / `SyncSessionLocal`). See [Celery DB access](#celery-db-access).{% endif %}
 {% endif %}
 {% if project_type in ["api-monolith", "api-microservice"] %}
 - **Respect layer boundaries.** Routes → services → repositories. Services own business logic and error translation. Repositories do DB I/O only. See [Layer contracts](#layer-contracts).
@@ -148,6 +148,31 @@ Use `examples/pdf-agent/` as the worked reference — it shows the full extensio
 2. Export it from `app/integrations/celery/tasks/__init__.py`.
 3. Periodic tasks: add an entry to `beat_schedule` in `app/integrations/celery/core.py`.
 4. The Celery app instance is `celery_app` in `app/main.py` (created by `create_celery()`); worker/beat/flower start scripts live in `scripts/start/`.
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
+5. DB access: **default to the sync session** — see [Celery DB access](#celery-db-access).
+
+### <a id="celery-db-access"></a>Celery DB access (sync-first)
+
+Celery workers are synchronous processes. Tasks are the **only** place in this codebase that touch the DB synchronously. Reference: `app/integrations/celery/tasks/dummy_task.py` (`sync_db_task`, `async_wrapped_task`).
+
+**The rule: if you can do the work with the sync session, do it. If you must reuse existing async code, wrap it with `asyncio.run`.**
+
+1. **Preferred — sync session.** Open `db_session_ctx()` (sync context manager over `SyncSessionLocal`) and use SQLAlchemy 2.0 style with **no** `await`: `session.execute(select(...))` then `.scalar_one_or_none()` / `.scalars().all()`. Commit with `session.commit()` when you write.
+   ```python
+   with db_session_ctx() as session:
+       result = session.execute(select(1)).scalar_one()
+   ```
+2. **Fallback — wrap async.** When the logic already lives in an async service/repository and rewriting it in sync isn't worth it, drive the coroutine with `asyncio.run(...)` and open the session with `adb_session_ctx()` (never the FastAPI-injected `AsyncDbSession`). `asyncio.run` spins up a fresh event loop per call — correct for a sync worker with no running loop.
+   ```python
+   async def _run() -> int:
+       async with adb_session_ctx() as session:
+           result = await session.execute(select(1))
+           return result.scalar_one()
+
+   asyncio.run(_run())
+   ```
+3. Do **not** reach for `asyncio.run` by default — a sync query is simpler, cheaper, and has no event-loop overhead. Reserve wrapping for genuine async-code reuse.
+{% endif %}
 {% endif %}
 
 ---
@@ -294,8 +319,9 @@ Model new code on the canonical files below — they are the reference implement
 | Schemas (Read/Create/Update) | `app/schemas/user.py` |
 | Schema exports | `app/schemas/__init__.py` |
 | Custom column types | `app/mappings.py` (`PrimaryKey`, `Unique`, `UniqueIndex`, `Indexed`, `str_10/50/100/255`, `email`, `numeric_*`, `datetime_tz`, `OneToMany`, `ManyToOne`, `FKUser`) |
-| Session dependency | `app/database.py` (`AsyncDbSession` — annotated FastAPI dependency) |
-| Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
+| Session dependency (async) | `app/database.py` (`AsyncDbSession` — annotated FastAPI dependency; `adb_session_ctx` outside routes) |
+{% if "celery" in plugins %}| Session (sync, Celery only) | `app/database.py` (`db_session_ctx` / `SyncSessionLocal`); example in `app/integrations/celery/tasks/dummy_task.py` |
+{% endif %}| Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
 
 The scaffold ships `app/api/routes/v1/user.py`, `app/services/user.py` and `app/repositories/user.py` as **empty stubs** — they mark where each layer lives but contain no example code. When implementing them (or any new resource), follow this shape:
 
@@ -344,8 +370,9 @@ Then mount `router` on `head_router` in `app/api/__init__.py` with a prefix and 
 | Service mixin | `app/user/services/activity_mixin.py` |
 | HATEOAS responses | `app/utils/api_utils.py` (`format_response`), `app/utils/hateoas.py` |
 | Custom column types | `app/mappings.py` (`PrimaryKey`, `Unique`, `UniqueIndex`, `Indexed`, `str_10/50/100/255`, `email`, `numeric_*`, `datetime_tz`, `OneToMany`, `ManyToOne`, `FKUser`) |
-| Session dependency | `app/database.py` (`AsyncDbSession` — annotated FastAPI dependency) |
-| Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
+| Session dependency (async) | `app/database.py` (`AsyncDbSession` — annotated FastAPI dependency; `adb_session_ctx` outside routes) |
+{% if "celery" in plugins %}| Session (sync, Celery only) | `app/database.py` (`db_session_ctx` / `SyncSessionLocal`); example in `app/integrations/celery/tasks/dummy_task.py` |
+{% endif %}| Error handling | `app/utils/exceptions.py` (`handle_exceptions`, `handle_exception`, `ResourceNotFoundError`) |
 | Router registration | `app/api.py` (`head_router`) |
 
 Services are exposed as module-level singletons (`user_service`) and imported directly by routes — follow that pattern for new modules.
@@ -367,6 +394,8 @@ Services are exposed as module-level singletons (`user_service`) and imported di
 | HTTP entrypoint | `app/api/routes/v1/chat.py` |
 | Full custom-workflow example | `examples/pdf-agent/` |
 | Model / column types / session | `app/models/`, `app/mappings.py`, `app/database.py` (`AsyncDbSession`) |
+{% if "celery" in plugins %}| Session (sync, Celery only) | `app/database.py` (`db_session_ctx` / `SyncSessionLocal`); example in `app/integrations/celery/tasks/dummy_task.py` |
+{% endif %}
 {% elif project_type == "mcp-server" %}
 | Pattern | Canonical file |
 |---------|----------------|
@@ -639,7 +668,8 @@ These are pointed reminders for the moment you're doing the thing. They repeat r
 - [ ] Periodic schedule added to `beat_schedule` in `core.py` if needed.
 - [ ] Task is idempotent or guarded — Celery retries can re-run it.
 - [ ] Failures are logged with context, not silently swallowed.
-{% endif %}
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}- [ ] DB access uses the **sync** session (`db_session_ctx`) by default; `asyncio.run` + `adb_session_ctx` only to reuse existing async code. **Not** `AsyncDbSession` (that's the FastAPI dependency).
+{% endif %}{% endif %}
 
 ---
 
