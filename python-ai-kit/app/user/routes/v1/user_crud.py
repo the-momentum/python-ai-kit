@@ -4,9 +4,11 @@ from uuid import UUID
 from app.config import settings
 from app.database import AsyncDbSession
 from app.schemas import FilterParams
-from app.user.schemas import UserCreate, UserRead, UserUpdate
+from app.user.exceptions import UserInactiveError
+from app.user.schemas import UserActivity, UserCreate, UserRead, UserUpdate
 from app.user.services import user_service
 from app.utils.api_utils import format_response
+from app.utils.exceptions import AppErrorResponse
 from fastapi import APIRouter, Query, Request, status
 
 router = APIRouter()
@@ -25,6 +27,19 @@ async def create_user(request: Request, user: UserCreate, session: AsyncDbSessio
 @format_response(extra_rels=user_rels)
 async def get_user(request: Request, user_id: UUID, session: AsyncDbSession):
     return await user_service.get(session, user_id)
+
+
+@router.get(
+    "/{user_id}/activity",
+    response_model=UserActivity,
+    responses={
+        UserInactiveError.status_code: {"model": AppErrorResponse, "description": UserInactiveError.__doc__}
+    },
+)
+async def get_user_activity(request: Request, user_id: UUID, session: AsyncDbSession):
+    if not await user_service.is_user_active(session, user_id):
+        raise UserInactiveError(user_id)
+    return UserActivity(active=True)
 
 
 @router.get("/", response_model=list[UserRead])

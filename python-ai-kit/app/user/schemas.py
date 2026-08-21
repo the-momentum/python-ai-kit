@@ -24,3 +24,7 @@ class UserUpdate(BaseModel):
     username: str | None = None
     email: EmailStr | None = None
     updated_at: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class UserActivity(BaseModel):
+    active: bool
