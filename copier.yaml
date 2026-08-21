@@ -148,6 +148,7 @@ _exclude:
   - "{{ 'app/utils/conversion.py' if project_type != 'api-monolith' else '' }}"
   - "{{ 'app/utils/healthcheck.py' if project_type != 'api-monolith' else '' }}"
   - "{{ 'app/utils/exceptions.py' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
+  - "{{ 'app/utils/exception_handlers.py' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'app/middlewares.py' if project_type == 'mcp-server' else '' }}"
   - "{{ 'scripts/healthchecks' if project_type not in ['api-monolith', 'api-microservice'] else '' }}"
   - "{{ 'scripts/start' if project_type == 'mcp-server' else '' }}"

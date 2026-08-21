@@ -1,31 +1,42 @@
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
 from functools import singledispatch, wraps
 from typing import Any, ParamSpec, TypeVar
 from uuid import UUID
 
-from fastapi.exceptions import HTTPException, RequestValidationError
 from psycopg.errors import IntegrityError as PsycopgIntegrityError
 from pydantic import BaseModel
+from pydantic_core import ErrorDetails
 from sqlalchemy.exc import IntegrityError as SQLAIntegrityError
 
 
-@dataclass
 class AppError(Exception):
     """Base application error — presentation-ready: it carries its own HTTP status, optional
     field-level `errors`, and response `headers`.
 
-    Domain modules subclass this. It is serialized by the global `AppError` handler in
-    `app/main.py`, NOT translated by `handle_exception` below — the default `handle_exception`
-    simply re-raises unknown types, so an AppError raised inside a `@handle_exceptions`-wrapped
-    service still propagates untouched to that global handler.
+    Every error this API returns is an AppError: domain modules subclass it, and
+    `handle_exception` below converts infrastructure exceptions into it. A single handler
+    (see `app/utils/exception_handlers.py`) serializes all of them to `AppErrorResponse`, so
+    clients only ever parse one error shape.
+
+    Subclasses with a fixed status only need to override the `status_code` class attribute.
     """
 
-    message: str
     status_code: int = 400
-    errors: dict[str, Any] | None = None
-    headers: dict[str, str] | None = None
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        errors: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.errors = errors
+        self.headers = headers
 
     def __str__(self) -> str:
         return self.message
@@ -42,6 +53,44 @@ class AppErrorResponse(BaseModel):
     errors: dict[str, Any] | None = None
 
 
+class ValidationErrors(BaseModel):
+    """`errors` payload of a 422 — pydantic's own report, passed through untouched."""
+
+    fields: list[ErrorDetails]
+
+
+class ValidationErrorResponse(AppErrorResponse):
+    """422 body: the same envelope as any other error, with `errors` typed for OpenAPI."""
+
+    errors: ValidationErrors
+
+
+class BadRequestError(AppError):
+    """Request cannot be fulfilled as sent."""
+
+    status_code = 400
+
+
+class NotFoundError(AppError):
+    """Requested resource does not exist."""
+
+    status_code = 404
+
+
+class UnprocessableEntityError(AppError):
+    """Request body or parameters failed validation."""
+
+    status_code = 422
+
+
+VALIDATION_ERROR_RESPONSE: dict[int | str, dict[str, Any]] = {
+    UnprocessableEntityError.status_code: {
+        "model": ValidationErrorResponse,
+        "description": UnprocessableEntityError.__doc__,
+    },
+}
+
+
 class MultipleResultsFoundError(Exception):
     pass
 
@@ -56,37 +105,28 @@ class ResourceNotFoundError(Exception):
 
 
 @singledispatch
-def handle_exception(exc: Exception, _: str) -> HTTPException:
+def handle_exception(exc: Exception, _: str) -> AppError:
     raise exc
 
 
 @handle_exception.register
-def _(exc: SQLAIntegrityError | PsycopgIntegrityError, entity: str) -> HTTPException:
-    return HTTPException(
-        status_code=400,
-        detail=f"{entity.capitalize()} entity already exists. Details: {exc.args[0]}",
+def _(exc: SQLAIntegrityError | PsycopgIntegrityError, entity: str) -> AppError:
+    return BadRequestError(
+        message=f"{entity.capitalize()} entity already exists.",
+        errors={"detail": str(exc.args[0])},
     )
 
 
 @handle_exception.register
-def _(exc: ResourceNotFoundError, _: str) -> HTTPException:
-    return HTTPException(status_code=404, detail=exc.detail)
+def _(exc: ResourceNotFoundError, _: str) -> AppError:
+    return NotFoundError(message=exc.detail)
 
 
 @handle_exception.register
-def _(exc: AttributeError, entity: str) -> HTTPException:
-    return HTTPException(
-        status_code=400,
-        detail=f"{entity.capitalize()} doesn't support attribute or method. Details: {exc.args[0]} ",
-    )
-
-
-@handle_exception.register
-def _(exc: RequestValidationError, _: str) -> HTTPException:
-    err_args = exc.args[0][0]
-    return HTTPException(
-        status_code=400,
-        detail=f"{err_args['msg']} - {err_args['ctx']['error']}",
+def _(exc: AttributeError, entity: str) -> AppError:
+    return BadRequestError(
+        message=f"{entity.capitalize()} doesn't support attribute or method.",
+        errors={"detail": str(exc.args[0])},
     )
 
 
