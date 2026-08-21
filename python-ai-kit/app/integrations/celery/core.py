@@ -1,7 +1,15 @@
 from app.config import settings
+from app.database import async_engine, sync_engine
 from celery import Celery
 from celery import current_app as current_celery_app
 from celery.schedules import crontab
+from celery.signals import worker_process_init
+
+
+@worker_process_init.connect
+def _dispose_db_engines_after_fork(**kwargs: object) -> None:
+    sync_engine.dispose(close=False)
+    async_engine.sync_engine.dispose(close=False)
 
 
 def create_celery() -> Celery:
