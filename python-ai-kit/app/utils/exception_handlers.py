@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -5,10 +7,19 @@ from fastapi.responses import JSONResponse
 
 from app.utils.exceptions import AppError, AppErrorResponse, UnprocessableEntityError
 
+logger = getLogger(__name__)
+
+SERVER_ERROR_MESSAGE = "Internal server error"
+
 
 def to_error_response(exc: AppError) -> JSONResponse:
     """Serialize an AppError to the one error body shape used across the API."""
-    body = AppErrorResponse(message=exc.message, status_code=exc.status_code, errors=exc.errors)
+    # 5xx detail may name tables or models, so it is logged (and picked up by Sentry) not returned.
+    if exc.status_code >= 500:
+        logger.error("Server error: %s", exc.message, exc_info=exc)
+        body = AppErrorResponse(message=SERVER_ERROR_MESSAGE, status_code=exc.status_code)
+    else:
+        body = AppErrorResponse(message=exc.message, status_code=exc.status_code, errors=exc.errors)
     return JSONResponse(
         status_code=exc.status_code,
         content=jsonable_encoder(body, exclude_none=True),

@@ -83,16 +83,24 @@ class UnprocessableEntityError(AppError):
     status_code = 422
 
 
+class MultipleResultsFoundError(AppError):
+    """More rows matched than the single result expected — a data integrity problem, not a
+    client mistake, hence 5xx. Its message names the model and row count, so it is logged
+    rather than returned; see `to_error_response`.
+    """
+
+    status_code = 500
+
+    def __init__(self, model: type, count: int) -> None:
+        super().__init__(message=f"Found {count} instances of {model.__name__} when only one was expected")
+
+
 VALIDATION_ERROR_RESPONSE: dict[int | str, dict[str, Any]] = {
     UnprocessableEntityError.status_code: {
         "model": ValidationErrorResponse,
         "description": UnprocessableEntityError.__doc__,
     },
 }
-
-
-class MultipleResultsFoundError(Exception):
-    pass
 
 
 class ResourceNotFoundError(Exception):
