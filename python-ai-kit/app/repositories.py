@@ -112,9 +112,7 @@ class CrudRepository[
         if results:
             if len(results) == 1:
                 return results[0]
-            raise MultipleResultsFoundError(
-                f"Found {len(results)} instances of {self.model} when only one was expected",
-            )
+            raise MultipleResultsFoundError(self.model, len(results))
         return None
 
     async def update(

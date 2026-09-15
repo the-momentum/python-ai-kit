@@ -1,9 +1,6 @@
 from logging import INFO, basicConfig
 
-{% if project_type in ["api-monolith", "api-microservice"] %}
-from fastapi import FastAPI, Request
-from fastapi.exceptions import RequestValidationError
-{% elif project_type == "agent" %}
+{% if project_type in ["api-monolith", "api-microservice", "agent"] %}
 from fastapi import FastAPI
 {% elif project_type == "mcp-server" %}
 from fastmcp import FastMCP
@@ -38,7 +35,7 @@ from app.integrations.sqladmin import admin_authentication_backend
 from app.middlewares import add_cors_middleware
 {% endif %}
 {% if project_type in ["api-monolith", "api-microservice"] %}
-from app.utils.exceptions import handle_exception
+from app.utils.exception_handlers import add_exception_handlers
 {% endif %}
 
 basicConfig(level=INFO, format="[%(asctime)s - %(name)s] (%(levelname)s) %(message)s")
@@ -60,18 +57,14 @@ init_tracing()
 {% endif %}
 
 add_cors_middleware(api)
+{% if project_type in ["api-monolith", "api-microservice"] %}
+add_exception_handlers(api)
+{% endif %}
 
 
 @api.get("/")
 async def root() -> dict[str, str]:
     return {"message": "Server is running!"}
-{% endif %}
-
-{% if project_type in ["api-monolith", "api-microservice"] %}
-
-@api.exception_handler(RequestValidationError)
-async def request_validation_exception_handler(_: Request, exc: RequestValidationError) -> None:
-    raise handle_exception(exc, err_msg=exc.args[0][0]["msg"])
 {% endif %}
 
 {% if project_type == "mcp-server" %}

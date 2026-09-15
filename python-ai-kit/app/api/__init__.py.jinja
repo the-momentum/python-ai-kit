@@ -5,9 +5,14 @@ from app.api.routes.v1.chat import router as chat_router_v1
 {% endif %}
 {% if project_type == "api-microservice" %}
 from app.api.routes.v1.user import router as user_router_v1
+from app.utils.exceptions import VALIDATION_ERROR_RESPONSE
 {% endif %}
 
+{% if project_type == "api-microservice" %}
+head_router = APIRouter(responses=VALIDATION_ERROR_RESPONSE)
+{% else %}
 head_router = APIRouter()
+{% endif %}
 
 {% if project_type == "agent" %}
 head_router.include_router(chat_router_v1, prefix="/chat", tags=["chat"])

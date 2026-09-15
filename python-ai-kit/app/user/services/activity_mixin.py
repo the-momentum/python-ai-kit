@@ -4,14 +4,13 @@ from uuid import UUID
 from app.database import AsyncDbSession
 from app.user.repositories import ActivityRepository
 from app.utils.exceptions import handle_exceptions
-from fastapi import Depends
 
 if TYPE_CHECKING:
     from app.user.services import UserService
 
 
 class ActivityMixin:
-    def __init__(self, activity_repository: ActivityRepository = Depends(), **kwargs):
+    def __init__(self, activity_repository: ActivityRepository, **kwargs):
         self.activity_repository = activity_repository
         super().__init__(**kwargs)
 

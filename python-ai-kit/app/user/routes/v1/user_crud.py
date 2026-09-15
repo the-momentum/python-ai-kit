@@ -1,13 +1,16 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Query, Request, status
+
 from app.config import settings
 from app.database import AsyncDbSession
 from app.schemas import FilterParams
-from app.user.schemas import UserCreate, UserRead, UserUpdate
+from app.user.exceptions import UserInactiveError
+from app.user.schemas import UserActivity, UserCreate, UserRead, UserUpdate
 from app.user.services import user_service
 from app.utils.api_utils import format_response
-from fastapi import APIRouter, Query, Request, status
+from app.utils.exceptions import AppErrorResponse, NotFoundError
 
 router = APIRouter()
 user_rels = [
@@ -21,10 +24,29 @@ async def create_user(request: Request, user: UserCreate, session: AsyncDbSessio
     return await user_service.create(session, user)
 
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__}},
+)
 @format_response(extra_rels=user_rels)
 async def get_user(request: Request, user_id: UUID, session: AsyncDbSession):
-    return await user_service.get(session, user_id)
+    return await user_service.get(session, user_id, raise_404=True)
+
+
+@router.get(
+    "/{user_id}/activity",
+    response_model=UserActivity,
+    responses={
+        NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__},
+        UserInactiveError.status_code: {"model": AppErrorResponse, "description": UserInactiveError.__doc__},
+    },
+)
+async def get_user_activity(request: Request, user_id: UUID, session: AsyncDbSession):
+    await user_service.get(session, user_id, raise_404=True)
+    if not await user_service.is_user_active(session, user_id):
+        raise UserInactiveError()
+    return UserActivity(active=True)
 
 
 @router.get("/", response_model=list[UserRead])
@@ -58,15 +80,23 @@ async def get_users(
     return await user_service.get_all(session, filter_params)
 
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.put(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__}},
+)
 @format_response(extra_rels=user_rels)
 async def update_user(
     request: Request, user_id: UUID, user: UserUpdate, session: AsyncDbSession
 ):
-    return await user_service.update(session, user_id, user)
+    return await user_service.update(session, user_id, user, raise_404=True)
 
 
-@router.delete("/{user_id}", response_model=UserRead)
+@router.delete(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__}},
+)
 @format_response(extra_rels=user_rels)
 async def delete_user(request: Request, user_id: UUID, session: AsyncDbSession):
-    return await user_service.delete(session, user_id)
+    return await user_service.delete(session, user_id, raise_404=True)
