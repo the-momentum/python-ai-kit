@@ -6,8 +6,9 @@ from uuid import UUID
 
 from psycopg.errors import IntegrityError as PsycopgIntegrityError
 from pydantic import BaseModel
-from pydantic_core import ErrorDetails
 from sqlalchemy.exc import IntegrityError as SQLAIntegrityError
+
+UNSAFE_VALIDATION_ERROR_TYPES = {"value_error", "assertion_error"}
 
 
 class AppError(Exception):
@@ -27,14 +28,14 @@ class AppError(Exception):
     def __init__(
         self,
         message: str,
+        *,
         status_code: int | None = None,
         errors: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message
-        if status_code is not None:
-            self.status_code = status_code
+        self.status_code = type(self).status_code if status_code is None else status_code
         self.errors = errors
         self.headers = headers
 
@@ -45,18 +46,26 @@ class AppError(Exception):
 class AppErrorResponse(BaseModel):
     """JSON body for an `AppError` (also documents the error shape in OpenAPI).
 
-    Headers live on the HTTP response, not in the body, so they are intentionally omitted here.
+    Headers and status code live on the HTTP response itself, not in the body, so they are
+    intentionally omitted here.
     """
 
     message: str
-    status_code: int
     errors: dict[str, Any] | None = None
 
 
-class ValidationErrors(BaseModel):
-    """`errors` payload of a 422 — pydantic's own report, passed through untouched."""
+class ValidationErrorDetail(BaseModel):
+    """Safe subset of pydantic's `ErrorDetails`: drops `input`/`ctx`, omits `msg` for unsafe error types."""
 
-    fields: list[ErrorDetails]
+    type: str
+    loc: tuple[int | str, ...]
+    msg: str | None = None
+
+
+class ValidationErrors(BaseModel):
+    """`errors` payload of a 422."""
+
+    fields: list[ValidationErrorDetail]
 
 
 class ValidationErrorResponse(AppErrorResponse):
@@ -118,10 +127,10 @@ def handle_exception(exc: Exception, _: str) -> AppError:
 
 
 @handle_exception.register
-def _(exc: SQLAIntegrityError | PsycopgIntegrityError, entity: str) -> AppError:
+def _(_: SQLAIntegrityError | PsycopgIntegrityError, entity: str) -> AppError:
     return BadRequestError(
         message=f"{entity.capitalize()} entity already exists.",
-        errors={"detail": str(exc.args[0])},
+        errors={"code": "duplicate_entry"},
     )
 
 

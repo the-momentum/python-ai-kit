@@ -1,6 +1,8 @@
 from typing import Annotated
 from uuid import UUID
 
+from fastapi import APIRouter, Query, Request, status
+
 from app.config import settings
 from app.database import AsyncDbSession
 from app.schemas import FilterParams
@@ -8,8 +10,7 @@ from app.user.exceptions import UserInactiveError
 from app.user.schemas import UserActivity, UserCreate, UserRead, UserUpdate
 from app.user.services import user_service
 from app.utils.api_utils import format_response
-from app.utils.exceptions import AppErrorResponse
-from fastapi import APIRouter, Query, Request, status
+from app.utils.exceptions import AppErrorResponse, NotFoundError
 
 router = APIRouter()
 user_rels = [
@@ -33,12 +34,14 @@ async def get_user(request: Request, user_id: UUID, session: AsyncDbSession):
     "/{user_id}/activity",
     response_model=UserActivity,
     responses={
-        UserInactiveError.status_code: {"model": AppErrorResponse, "description": UserInactiveError.__doc__}
+        NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__},
+        UserInactiveError.status_code: {"model": AppErrorResponse, "description": UserInactiveError.__doc__},
     },
 )
 async def get_user_activity(request: Request, user_id: UUID, session: AsyncDbSession):
+    await user_service.get(session, user_id, raise_404=True)
     if not await user_service.is_user_active(session, user_id):
-        raise UserInactiveError(user_id)
+        raise UserInactiveError()
     return UserActivity(active=True)
 
 

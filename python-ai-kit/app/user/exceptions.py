@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from app.utils.exceptions import AppError
 
 
@@ -8,5 +6,5 @@ class UserInactiveError(AppError):
 
     status_code = 403
 
-    def __init__(self, user_id: UUID) -> None:
-        super().__init__(message=f"User {user_id} is inactive")
+    def __init__(self) -> None:
+        super().__init__(message="User is inactive", errors={"code": "user_inactive"})
