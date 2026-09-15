@@ -24,10 +24,14 @@ async def create_user(request: Request, user: UserCreate, session: AsyncDbSessio
     return await user_service.create(session, user)
 
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__}},
+)
 @format_response(extra_rels=user_rels)
 async def get_user(request: Request, user_id: UUID, session: AsyncDbSession):
-    return await user_service.get(session, user_id)
+    return await user_service.get(session, user_id, raise_404=True)
 
 
 @router.get(
@@ -76,15 +80,23 @@ async def get_users(
     return await user_service.get_all(session, filter_params)
 
 
-@router.put("/{user_id}", response_model=UserRead)
+@router.put(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__}},
+)
 @format_response(extra_rels=user_rels)
 async def update_user(
     request: Request, user_id: UUID, user: UserUpdate, session: AsyncDbSession
 ):
-    return await user_service.update(session, user_id, user)
+    return await user_service.update(session, user_id, user, raise_404=True)
 
 
-@router.delete("/{user_id}", response_model=UserRead)
+@router.delete(
+    "/{user_id}",
+    response_model=UserRead,
+    responses={NotFoundError.status_code: {"model": AppErrorResponse, "description": NotFoundError.__doc__}},
+)
 @format_response(extra_rels=user_rels)
 async def delete_user(request: Request, user_id: UUID, session: AsyncDbSession):
-    return await user_service.delete(session, user_id)
+    return await user_service.delete(session, user_id, raise_404=True)
