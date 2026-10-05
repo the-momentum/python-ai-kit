@@ -8,5 +8,6 @@ def init_sentry() -> None:
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,
             environment=settings.SENTRY_ENV,
+            include_local_variables=False,
             traces_sample_rate=settings.SENTRY_SAMPLES_RATE,
         )
