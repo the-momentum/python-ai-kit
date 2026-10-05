@@ -424,6 +424,7 @@ Rules:
 - Don't silently swallow exceptions in background work — log with context and re-raise or translate.
 {% if "sentry" in plugins %}
 - Sentry is initialized in `app/main.py` via `init_sentry()` (`app/integrations/sentry.py`), gated by `SENTRY_ENABLED`. Unhandled exceptions reach Sentry automatically; if you catch-and-continue (batch loops, task error returns), call `sentry_sdk.capture_exception(e)` alongside the log, or the error is invisible to monitoring.
+- Sentry uses `include_local_variables=False` to omit stack-frame local variable values from exception events. Exception reporting remains enabled; this setting does not sanitize exception messages or other event data.
 {% endif %}
 {% endif %}
 
