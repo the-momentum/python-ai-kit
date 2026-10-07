@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager, contextmanager
-from typing import Annotated, AsyncIterator, Iterator, TypedDict
+from collections.abc import AsyncGenerator, Generator
+from typing import Annotated, TypedDict
 from uuid import UUID
 
 from fastapi import Depends
@@ -75,7 +76,7 @@ AsyncSessionLocal = _prepare_async_sessionmaker(async_engine)
 SyncSessionLocal = _prepare_sessionmaker(sync_engine)
 
 
-async def _get_async_db_dependency() -> AsyncIterator[AsyncSession]:
+async def _get_async_db_dependency() -> AsyncGenerator[AsyncSession]:
     session = AsyncSessionLocal()
     try:
         yield session
@@ -86,7 +87,7 @@ async def _get_async_db_dependency() -> AsyncIterator[AsyncSession]:
         await session.close()
 
 
-def _get_db_dependency() -> Iterator[Session]:
+def _get_db_dependency() -> Generator[Session]:
     session = SyncSessionLocal()
     try:
         yield session

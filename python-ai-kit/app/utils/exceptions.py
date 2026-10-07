@@ -1,4 +1,4 @@
-import asyncio
+import inspect
 from collections.abc import Callable
 from functools import singledispatch, wraps
 from typing import ParamSpec, TypeVar
@@ -62,7 +62,7 @@ T = TypeVar("T")
 
 
 def handle_exceptions(func: Callable[P, T]) -> Callable[P, T]:
-    if asyncio.iscoroutinefunction(func):
+    if inspect.iscoroutinefunction(func):
         # async case
         @wraps(func)
         async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
