@@ -423,7 +423,7 @@ Rules:
 - Never leak raw `sqlalchemy.exc` errors past the service boundary; extend `handle_exception` with a new `@register` instead.
 - Don't silently swallow exceptions in background work — log with context and re-raise or translate.
 {% if "sentry" in plugins %}
-- Sentry is initialized in `app/main.py` via `init_sentry()` (`app/integrations/sentry.py`), gated by `SENTRY_ENABLED`. Unhandled exceptions reach Sentry automatically; if you catch-and-continue (batch loops, task error returns), call `sentry_sdk.capture_exception(e)` alongside the log, or the error is invisible to monitoring.
+- Sentry is initialized in `app/main.py` via `init_sentry()` (`app/integrations/sentry.py`), gated by `SENTRY_ENABLED`. Unhandled exceptions reach Sentry automatically. Log records are breadcrumbs only (`LoggingIntegration(event_level=None)`) — a bare `logger.error` **never** reaches Sentry. If you catch-and-continue (batch loops, task error returns), use `log_and_capture_error(error, logger=logger, message=msg, extra={...})` from `app/integrations/sentry.py`; don't use it when the exception is re-raised (it would be captured twice).
 {% endif %}
 {% endif %}
 
