@@ -12,6 +12,9 @@ from app.config import settings
 {% if "mlflow" in plugins %}
 from app.integrations.mlflow import trace_chat
 {% endif %}
+{% if "sentry" in plugins %}
+from app.integrations.sentry import log_and_capture_error
+{% endif %}
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -70,6 +73,10 @@ async def chat(request: ChatRequest):
     except asyncio.TimeoutError:
         logger.error("Chat request timeout")
         return ChatResponse(response="", error="Request timeout. Please try again.")
-    except Exception as e:
-        logger.error(f"Chat request failed: {e}")
-        return ChatResponse(response="", error=f"An error occurred: {str(e)}")
+    except Exception as error:
+        {% if "sentry" in plugins %}
+        log_and_capture_error(error, logger=logger, message=f"Chat request failed: {error}")
+        {% else %}
+        logger.error(f"Chat request failed: {error}")
+        {% endif %}
+        return ChatResponse(response="", error=f"An error occurred: {str(error)}")
