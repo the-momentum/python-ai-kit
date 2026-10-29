@@ -448,6 +448,24 @@ Rules:
 - Route tags: singular, kebab-case.
 {% endif %}
 
+### Credential-safe startup and telemetry
+- Never put passwords, tokens, credential-bearing URLs, or environment-file contents in process arguments or log output. Use configuration, environment variables, or a supported protected file/stdin input.
+{% if project_type != "mcp-server" %}
+- Start scripts explicitly use `set +x` before sensitive expansion, including when invoked with `bash -x`; retain normal failure handling. Error output still reaches the container logs.
+{% endif %}
+{% if "celery" in plugins %}
+- Flower and its readiness check use the configured `app.main:celery_app`; do not add a broker URL to their command line.
+{% endif %}
+{% if "mlflow" in plugins %}
+- The MLflow entrypoint passes a password-free database URI through `MLFLOW_BACKEND_STORE_URI`; psycopg2/libpq reads `PGPASSWORD`. Keep database credentials out of URIs, argv, and shell traces.
+{% endif %}
+{% if "sentry" in plugins %}
+- Sentry disables automatic argument collection and local-variable capture. Preserve credential sanitisation before SDK serialisation/truncation and in final error, transaction, and breadcrumb hooks. It masks sensitive fields and recognised URL/token/assignment formats, not arbitrary unlabelled private text.
+- Filter complete Authorization values for every scheme, including Digest, and serialized or multiline lists. Preserve adjacent metadata when a quoted/list boundary is reliable; otherwise filter through message end.
+- Handle escaped quotes, backslashes, line breaks and malformed quoted secrets without leaving credential suffixes. Match free-text assignments with `:` or `=`, and whitespace only for known one- or two-dash secret flags; preserve ordinary messages such as `Invalid token signature`.
+{% endif %}
+- Use synthetic secrets for regression tests. Assert on process argv, stdout/stderr, and in-memory SDK envelopes; keep safe diagnostic metadata intact. Cover compound names such as `PGPASSWORD`, `SECRET_KEY`, `MASTER_KEY`, and `AWS_SECRET_ACCESS_KEY`.
+
 ### Configuration
 - All settings live in `Settings` (`app/config.py`), loaded from `config/.env`. Never read `os.environ` directly in feature code.
 - New setting → add the field to `Settings` **and** document it in `config/.env.example`.

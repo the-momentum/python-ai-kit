@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e -x
+set +x
+set -e
 
 {% if project_type in ["api-monolith", "api-microservice"] %}
 until uv run python -u scripts/healthchecks/db_up_check.py

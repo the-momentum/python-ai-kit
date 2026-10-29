@@ -1,4 +1,5 @@
 #!/bin/sh
+set +x
 set -e
 
 export PGHOST="${PGHOST:-db}"
@@ -8,10 +9,11 @@ export PGPASSWORD="${PGPASSWORD:-{{project_name}}}"
 export MLFLOW_DB_NAME="${MLFLOW_DB_NAME:-mlflow}"
 export MLFLOW_SERVER_ALLOWED_HOSTS="${MLFLOW_SERVER_ALLOWED_HOSTS:-mlflow:5000,localhost:5000,127.0.0.1:5000}"
 
+export MLFLOW_BACKEND_STORE_URI="postgresql://${PGUSER}@${PGHOST}:${PGPORT}/${MLFLOW_DB_NAME}"
+
 python /ensure_db.py
 
 exec mlflow server \
     --host 0.0.0.0 \
     --port 5000 \
-    --backend-store-uri "postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${MLFLOW_DB_NAME}" \
     --artifacts-destination /mlflow-artifacts
